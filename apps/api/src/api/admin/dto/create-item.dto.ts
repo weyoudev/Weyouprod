@@ -9,4 +9,9 @@ export class CreateItemDto {
   @Transform(({ value }) => (value === 'true' ? true : value === 'false' ? false : value))
   @IsBoolean()
   active?: boolean;
+
+  /** Optional icon name for this catalog item (stored as plain string). */
+  @IsOptional()
+  @IsString()
+  icon?: string;
 }

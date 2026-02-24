@@ -42,6 +42,7 @@ export class AdminCatalogMatrixController {
         id: item.id,
         name: item.name,
         active: item.active,
+        icon: (item as { icon?: string | null }).icon ?? null,
         branchIds: (item as { branchIds?: string[] }).branchIds ?? [],
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
@@ -78,6 +79,7 @@ export class AdminCatalogMatrixController {
     const result = await this.adminCatalogService.updateItemWithMatrix(id, {
       name: dto.name,
       active: dto.active,
+      icon: dto.icon ?? null,
       branchIds: dto.branchIds,
       segmentPrices: dto.segmentPrices.map((p) => ({
         segmentCategoryId: p.segmentCategoryId,
@@ -91,6 +93,7 @@ export class AdminCatalogMatrixController {
         id: result.item.id,
         name: result.item.name,
         active: result.item.active,
+        icon: (result.item as { icon?: string | null }).icon ?? null,
         createdAt: result.item.createdAt,
         updatedAt: result.item.updatedAt,
       },

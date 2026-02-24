@@ -6,6 +6,7 @@ type PrismaLike = Pick<PrismaClient, 'laundryItem'>;
 function toRecord(row: {
   id: string;
   name: string;
+  icon: string | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -13,6 +14,7 @@ function toRecord(row: {
   return {
     id: row.id,
     name: row.name,
+    icon: row.icon,
     active: row.active,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -22,17 +24,23 @@ function toRecord(row: {
 export class PrismaLaundryItemsRepo implements LaundryItemsRepo {
   constructor(private readonly prisma: PrismaLike) {}
 
-  async create(name: string, active: boolean): Promise<LaundryItemRecord> {
+  async create(name: string, active: boolean, icon?: string | null): Promise<LaundryItemRecord> {
     const row = await this.prisma.laundryItem.create({
-      data: { name, active },
+      data: { name, active, icon: icon ?? null },
     });
     return toRecord(row);
   }
 
-  async update(id: string, patch: { name?: string; active?: boolean }): Promise<LaundryItemRecord> {
+  async update(
+    id: string,
+    patch: { name?: string; active?: boolean; icon?: string | null },
+  ): Promise<LaundryItemRecord> {
     const row = await this.prisma.laundryItem.update({
       where: { id },
-      data: patch,
+      data: {
+        ...patch,
+        ...(patch.icon !== undefined && { icon: patch.icon }),
+      },
     });
     return toRecord(row);
   }

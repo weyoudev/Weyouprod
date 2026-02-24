@@ -10,7 +10,7 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://weyou-api.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://version-01-j4co.onrender.com"
       },
       "android": {
         "buildType": "apk"
@@ -19,7 +19,7 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://weyou-api.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://version-01-j4co.onrender.com"
       },
       "android": {
         "buildType": "app-bundle"

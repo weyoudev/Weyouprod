@@ -60,13 +60,16 @@ export class AdminCatalogService {
     return withPricesList;
   }
 
-  async createItem(name: string, active: boolean) {
-    return createLaundryItem(name, active, {
+  async createItem(name: string, active: boolean, icon: string | null | undefined) {
+    return createLaundryItem(name, active, icon, {
       laundryItemsRepo: this.laundryItemsRepo,
     });
   }
 
-  async updateItem(id: string, patch: { name?: string; active?: boolean }) {
+  async updateItem(
+    id: string,
+    patch: { name?: string; active?: boolean; icon?: string | null },
+  ) {
     return updateLaundryItem(id, patch, {
       laundryItemsRepo: this.laundryItemsRepo,
     });
@@ -106,6 +109,7 @@ export class AdminCatalogService {
     body: {
       name?: string;
       active?: boolean;
+      icon?: string | null;
       segmentPrices: Array<{ segmentCategoryId: string; serviceCategoryId: string; priceRupees: number; isActive?: boolean }>;
       branchIds?: string[];
     },
@@ -115,6 +119,7 @@ export class AdminCatalogService {
         itemId,
         name: body.name,
         active: body.active,
+        icon: body.icon,
         segmentPrices: body.segmentPrices.map((p) => ({
           segmentCategoryId: p.segmentCategoryId,
           serviceCategoryId: p.serviceCategoryId,

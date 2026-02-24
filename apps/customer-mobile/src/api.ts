@@ -1,34 +1,46 @@
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? '';
-const apiBase = () => (API_BASE ? `${API_BASE.replace(/\/$/, '')}/api` : '');
+import { API_BASE_URL, getApiBase, API_TIMEOUT_MS } from './config/api';
 
-const CONNECTION_TEST_TIMEOUT_MS = 60000; // Render cold start can take 30–60s
+const apiBase = getApiBase;
+
+/** Fetch with timeout (uses API_TIMEOUT_MS). Clears timeout on success or throw. */
+async function fetchWithTimeout(
+  url: string,
+  init?: RequestInit,
+  timeoutMs: number = API_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal });
+    clearTimeout(timeoutId);
+    return res;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
+}
 
 /** Call before login to verify the app can reach the API. Throws with a clear message if not. */
 export async function testConnection(): Promise<void> {
   const base = apiBase();
   if (!base) throw new Error('EXPO_PUBLIC_API_URL is not set in .env. Restart Expo after adding it.');
-  const rootUrl = base.replace(/\/api$/, '');
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), CONNECTION_TEST_TIMEOUT_MS);
+  const rootUrl = base.replace(/\/api\/?$/, '');
   try {
-    // Try GET /api first (our route); if 404, try GET / (root) in case deploy has only one
-    let res = await fetch(`${rootUrl}/api`, { method: 'GET', signal: controller.signal });
+    let res = await fetchWithTimeout(`${rootUrl}/api`, { method: 'GET' });
     if (res.status === 404) {
-      res = await fetch(`${rootUrl}/`, { method: 'GET', signal: controller.signal });
+      res = await fetchWithTimeout(`${rootUrl}/`, { method: 'GET' });
     }
-    clearTimeout(timeoutId);
     if (!res.ok) {
       const msg = res.status >= 502 && res.status <= 504
-        ? 'Server is starting or busy (Render may take up to a minute). Please try again.'
+        ? 'Server is starting or busy. Please try again.'
         : res.status === 404
-          ? 'API returned 404. Redeploy the API on Render from the latest code (Dashboard → weyou-api → Manual Deploy).'
+          ? 'API returned 404. Redeploy the API from the latest code.'
           : `Server returned ${res.status}. Check that the API is deployed and running.`;
       throw new Error(msg);
     }
   } catch (err) {
-    clearTimeout(timeoutId);
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Connection timed out. If using Render, the server may be starting (wait up to 1 minute and try again).');
+      throw new Error('Connection timed out. Check network and try again.');
     }
     throw err;
   }
@@ -48,7 +60,7 @@ export async function getPublicBranding(): Promise<PublicBrandingResponse> {
   const base = apiBase();
   if (!base) return { businessName: null, logoUrl: null, termsAndConditions: null, privacyPolicy: null, welcomeBackgroundUrl: null };
   try {
-    const res = await fetch(`${base}/branding/public`);
+    const res = await fetchWithTimeout(`${base}/branding/public`);
     if (!res.ok) return { businessName: null, logoUrl: null, termsAndConditions: null, privacyPolicy: null, welcomeBackgroundUrl: null };
     const data = (await res.json()) as PublicBrandingResponse;
     return {
@@ -67,7 +79,7 @@ export async function getPublicBranding(): Promise<PublicBrandingResponse> {
 export function brandingLogoFullUrl(logoUrl: string | null): string | null {
   if (!logoUrl?.trim()) return null;
   if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) return logoUrl;
-  const base = API_BASE ? API_BASE.replace(/\/$/, '') : '';
+  const base = API_BASE_URL ? API_BASE_URL.replace(/\/$/, '') : '';
   if (!base) return null;
   const path = logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`;
   return `${base}${path}`;
@@ -87,7 +99,7 @@ export async function getPublicCarousel(): Promise<PublicCarouselResponse> {
   const base = apiBase();
   if (!base) return { imageUrls: [] };
   try {
-    const res = await fetch(`${base}/carousel/public`);
+    const res = await fetchWithTimeout(`${base}/carousel/public`);
     if (!res.ok) return { imageUrls: [] };
     const data = (await res.json()) as PublicCarouselResponse;
     return { imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [] };
@@ -100,7 +112,7 @@ export async function getPublicCarousel(): Promise<PublicCarouselResponse> {
 export function carouselImageFullUrl(imageUrl: string): string {
   if (!imageUrl?.trim()) return '';
   if (imageUrl.startsWith('http')) return imageUrl;
-  const base = API_BASE ? API_BASE.replace(/\/$/, '') : '';
+  const base = API_BASE_URL ? API_BASE_URL.replace(/\/$/, '') : '';
   if (!base) return imageUrl;
   const path = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
   return `${base}${path}`;
@@ -112,7 +124,6 @@ export interface VerifyOtpResponse {
   user: { id: string; phone: string; role: string };
 }
 
-const REQUEST_TIMEOUT_MS = 15000;
 
 async function parseErrorResponse(res: Response): Promise<string> {
   if (res.status >= 502 && res.status <= 504) {
@@ -133,36 +144,27 @@ export async function requestOtp(phone: string): Promise<{ requestId: string }> 
   const base = apiBase();
   if (!base) {
     throw new Error(
-      'API URL not set. Add EXPO_PUBLIC_API_URL in .env (e.g. https://weyou-api.onrender.com for anywhere, or http://YOUR_PC_IP:3006 for local), then restart Expo.'
+      'API URL not set. Add EXPO_PUBLIC_API_URL in .env and restart Expo.'
     );
   }
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const res = await fetch(`${base}/auth/customer/otp/request`, {
+    const res = await fetchWithTimeout(`${base}/auth/customer/otp/request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone: phone.trim() }),
-      signal: controller.signal,
     });
-    clearTimeout(timeoutId);
     if (!res.ok) {
       const msg = await parseErrorResponse(res);
       throw new Error(msg);
     }
     return res.json() as Promise<{ requestId: string }>;
   } catch (err) {
-    clearTimeout(timeoutId);
     if (err instanceof Error) {
       if (err.name === 'AbortError') {
-        throw new Error(
-          'Request timed out. Check: 1) API running (or use https://weyou-api.onrender.com in .env) 2) EXPO_PUBLIC_API_URL correct 3) Network. Restart Expo after .env change.'
-        );
+        throw new Error('Request timed out. Check network and EXPO_PUBLIC_API_URL, then try again.');
       }
       if (err.message === 'Network request failed' || err.message.includes('Network')) {
-        throw new Error(
-          'Cannot reach server. In .env set EXPO_PUBLIC_API_URL (e.g. https://weyou-api.onrender.com for anywhere). Restart Expo.'
-        );
+        throw new Error('Cannot reach server. Set EXPO_PUBLIC_API_URL in .env and restart Expo.');
       }
     }
     throw err;
@@ -176,10 +178,8 @@ export async function verifyOtp(
 ): Promise<VerifyOtpResponse> {
   const base = apiBase();
   if (!base) throw new Error('API URL not set. Set EXPO_PUBLIC_API_URL in .env and restart Expo.');
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const res = await fetch(`${base}/auth/customer/otp/verify`, {
+    const res = await fetchWithTimeout(`${base}/auth/customer/otp/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -187,16 +187,13 @@ export async function verifyOtp(
         otp,
         requestId: requestId ?? phone.trim(),
       }),
-      signal: controller.signal,
     });
-    clearTimeout(timeoutId);
     if (!res.ok) {
       const msg = await parseErrorResponse(res);
       throw new Error(msg);
     }
     return res.json() as Promise<VerifyOtpResponse>;
   } catch (err) {
-    clearTimeout(timeoutId);
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error('Verification timed out. Check network and try again.');
     }
@@ -252,18 +249,13 @@ export interface MeResponse {
 export async function getMe(token: string): Promise<MeResponse> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const res = await fetch(`${base}/me`, {
+    const res = await fetchWithTimeout(`${base}/me`, {
       headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
     });
-    clearTimeout(timeoutId);
     if (!res.ok) throw new Error('Failed to load profile');
     return res.json() as Promise<MeResponse>;
   } catch (err) {
-    clearTimeout(timeoutId);
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error('Request timed out. Check network and try again.');
     }
@@ -277,7 +269,7 @@ export async function updateMe(
 ): Promise<void> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const res = await fetch(`${base}/me`, {
+  const res = await fetchWithTimeout(`${base}/me`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -295,7 +287,7 @@ export async function updateMe(
 export async function registerPushToken(token: string, pushToken: string): Promise<{ ok: boolean }> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const res = await fetch(`${base}/me/push-token`, {
+  const res = await fetchWithTimeout(`${base}/me/push-token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -326,7 +318,7 @@ export interface BackendAddress {
 export async function listAddresses(token: string): Promise<BackendAddress[]> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const res = await fetch(`${base}/addresses`, {
+  const res = await fetchWithTimeout(`${base}/addresses`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('Failed to load addresses');
@@ -348,7 +340,7 @@ export async function createAddress(
 ): Promise<{ id: string; pincode: string }> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const res = await fetch(`${base}/addresses`, {
+  const res = await fetchWithTimeout(`${base}/addresses`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -379,7 +371,7 @@ export async function updateAddress(
 ): Promise<BackendAddress> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const res = await fetch(`${base}/addresses/${id}`, {
+  const res = await fetchWithTimeout(`${base}/addresses/${id}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -397,7 +389,7 @@ export async function updateAddress(
 export async function deleteAddress(token: string, id: string): Promise<void> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const res = await fetch(`${base}/addresses/${id}`, {
+  const res = await fetchWithTimeout(`${base}/addresses/${id}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -422,7 +414,7 @@ export async function checkServiceability(pincode: string): Promise<Serviceabili
   if (!base) {
     return { pincode, serviceable: false, message: 'Backend not linked. Set EXPO_PUBLIC_API_URL in .env and restart the app.' };
   }
-  const res = await fetch(`${base}/serviceability?pincode=${encodeURIComponent(pincode)}`);
+  const res = await fetchWithTimeout(`${base}/serviceability?pincode=${encodeURIComponent(pincode)}`);
   const data = (await res.json()) as ServiceabilityResult & { message?: string[]; statusCode?: number };
   if (!res.ok) {
     const msg = Array.isArray(data.message) ? data.message.join(', ') : (data.message as string) || 'Request failed';
@@ -454,7 +446,7 @@ export async function getSlotAvailability(
   if (!base) {
     return { isServiceable: false, isHoliday: false, timeSlots: [] };
   }
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${base}/slots/availability?pincode=${encodeURIComponent(pincode)}&date=${encodeURIComponent(date)}`
   );
   const data = (await res.json()) as SlotAvailability;
@@ -482,7 +474,7 @@ export interface AvailablePlanItem {
 export async function getAvailablePlans(token: string): Promise<AvailablePlanItem[]> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const res = await fetch(`${base}/subscriptions/plans/available`, {
+  const res = await fetchWithTimeout(`${base}/subscriptions/plans/available`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('Failed to load subscription plans');
@@ -504,7 +496,7 @@ export async function purchaseSubscription(
 ): Promise<PurchaseSubscriptionResult> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const res = await fetch(`${base}/subscriptions`, {
+  const res = await fetchWithTimeout(`${base}/subscriptions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -545,7 +537,7 @@ export interface SubscriptionDetailResponse {
 export async function getSubscriptionDetail(token: string, subscriptionId: string): Promise<SubscriptionDetailResponse | null> {
   const base = apiBase();
   if (!base) return null;
-  const res = await fetch(`${base}/subscriptions/${subscriptionId}`, {
+  const res = await fetchWithTimeout(`${base}/subscriptions/${subscriptionId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return null;
@@ -645,7 +637,7 @@ export async function createOrder(
   } else {
     payload.selectedServices = body.selectedServices ?? ['WASH_FOLD'];
   }
-  const res = await fetch(`${base}/orders`, {
+  const res = await fetchWithTimeout(`${base}/orders`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -665,7 +657,7 @@ export async function createOrder(
 export async function listOrders(token: string): Promise<OrderSummary[]> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const res = await fetch(`${base}/orders`, {
+  const res = await fetchWithTimeout(`${base}/orders`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('Failed to load orders');
@@ -675,7 +667,7 @@ export async function listOrders(token: string): Promise<OrderSummary[]> {
 export async function getOrder(token: string, orderId: string): Promise<OrderDetail> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const res = await fetch(`${base}/orders/${orderId}`, {
+  const res = await fetchWithTimeout(`${base}/orders/${orderId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('Failed to load order');
@@ -688,7 +680,7 @@ export async function listOrderInvoices(
 ): Promise<OrderInvoice[]> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const res = await fetch(`${base}/orders/${orderId}/invoices`, {
+  const res = await fetchWithTimeout(`${base}/orders/${orderId}/invoices`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('Failed to load invoices');
@@ -706,7 +698,7 @@ export async function fetchInvoicePdfBase64(invoiceId: string, token: string): P
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
   const url = `${base}/invoices/${invoiceId}/pdf`;
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('Failed to load invoice');
@@ -726,7 +718,7 @@ export async function submitAreaRequest(body: {
 }): Promise<{ id: string; status: string }> {
   const base = apiBase();
   if (!base) throw new Error('API URL not configured');
-  const res = await fetch(`${base}/feedback/area-request`, {
+  const res = await fetchWithTimeout(`${base}/feedback/area-request`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

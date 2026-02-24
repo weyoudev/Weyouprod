@@ -7,7 +7,7 @@ export interface UpdateLaundryItemDeps {
 
 export async function updateLaundryItem(
   id: string,
-  patch: { name?: string; active?: boolean },
+  patch: { name?: string; active?: boolean; icon?: string | null },
   deps: UpdateLaundryItemDeps,
 ): Promise<LaundryItemRecord> {
   const existing = await deps.laundryItemsRepo.getById(id);

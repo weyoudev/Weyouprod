@@ -7,6 +7,7 @@ import { useUpdateItem } from '@/hooks/useCatalog';
 import { toast } from 'sonner';
 import type { CatalogItemWithMatrix, ServiceCategory, SegmentCategory } from '@/types';
 import { Pencil } from 'lucide-react';
+import { CatalogItemIcon } from './CatalogItemIcon';
 
 function groupBySegment(
   segmentPrices: CatalogItemWithMatrix['segmentPrices'],
@@ -57,6 +58,9 @@ export function CatalogCard({ item, serviceCategories, segmentCategories, canEdi
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50 text-muted-foreground">
+            <CatalogItemIcon icon={item.icon} size={22} />
+          </span>
           <span className="font-medium">{item.name}</span>
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-medium ${

@@ -27,6 +27,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DateTimePickerModule from '@react-native-community/datetimepicker';
 const DateTimePicker = DateTimePickerModule?.default ?? DateTimePickerModule;
+import { checkApiConnection } from './src/config/api';
 import {
   checkServiceability,
   submitAreaRequest,
@@ -543,6 +544,22 @@ export default function App() {
       });
     return () => { cancelled = true; };
   }, [plansAddressId, savedAddresses]);
+
+  // Startup: verify API connection and log result (no silent failures)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const ok = await checkApiConnection();
+      if (mounted) {
+        if (ok) {
+          console.log('API Connected');
+        } else {
+          console.warn('API Not Connected');
+        }
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const INIT_TIMEOUT_MS = 12000; // Show welcome screen if token/API check hangs
   useEffect(() => {
@@ -2165,7 +2182,6 @@ export default function App() {
         </ScrollView>
       );
     } else if (homeScreen === 'subscriptionDetail') {
-      const apiOrigin = process.env.EXPO_PUBLIC_API_URL ?? '';
       content = (
         <ScrollView style={styles.scroll} contentContainerStyle={[styles.scrollContent, styles.scrollContentNoTopPadding]}>
           <View style={styles.card}>

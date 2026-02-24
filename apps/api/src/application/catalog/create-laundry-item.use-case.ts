@@ -7,7 +7,8 @@ export interface CreateLaundryItemDeps {
 export async function createLaundryItem(
   name: string,
   active: boolean,
+  icon: string | null | undefined,
   deps: CreateLaundryItemDeps,
 ): Promise<LaundryItemRecord> {
-  return deps.laundryItemsRepo.create(name, active);
+  return deps.laundryItemsRepo.create(name, active, icon ?? null);
 }

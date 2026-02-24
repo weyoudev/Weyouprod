@@ -24,8 +24,9 @@ export class AdminCatalogController {
     const item = await this.adminCatalogService.createItem(
       dto.name,
       dto.active ?? true,
+      dto.icon ?? null,
     );
-    return { id: item.id, name: item.name, active: item.active };
+    return { id: item.id, name: item.name, active: item.active, icon: item.icon ?? null };
   }
 
   @Patch(':id')
@@ -33,8 +34,9 @@ export class AdminCatalogController {
     const item = await this.adminCatalogService.updateItem(id, {
       name: dto.name,
       active: dto.active,
+      icon: dto.icon ?? null,
     });
-    return { id: item.id, name: item.name, active: item.active };
+    return { id: item.id, name: item.name, active: item.active, icon: item.icon ?? null };
   }
 
   @Put(':id/prices')

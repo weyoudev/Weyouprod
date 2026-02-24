@@ -33,6 +33,8 @@ var OrderType;
 (function (OrderType) {
     OrderType["INDIVIDUAL"] = "INDIVIDUAL";
     OrderType["SUBSCRIPTION"] = "SUBSCRIPTION";
+    /** Laundry items + subscription (new or existing); subscription assigned at ACK by admin. */
+    OrderType["BOTH"] = "BOTH";
 })(OrderType || (exports.OrderType = OrderType = {}));
 var Role;
 (function (Role) {
@@ -46,6 +48,7 @@ var PaymentProvider;
     PaymentProvider["RAZORPAY"] = "RAZORPAY";
     PaymentProvider["CASH"] = "CASH";
     PaymentProvider["UPI"] = "UPI";
+    PaymentProvider["CARD"] = "CARD";
     PaymentProvider["NONE"] = "NONE";
 })(PaymentProvider || (exports.PaymentProvider = PaymentProvider = {}));
 var PaymentStatus;

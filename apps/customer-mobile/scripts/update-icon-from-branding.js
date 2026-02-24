@@ -1,7 +1,7 @@
 /**
  * Downloads the branding logo from the API and saves it as the app icon.
  * Run from repo root: node apps/customer-mobile/scripts/update-icon-from-branding.js
- * Requires: EXPO_PUBLIC_API_URL in .env (e.g. https://weyou-api.onrender.com or http://localhost:3006)
+ * Requires: EXPO_PUBLIC_API_URL in .env (e.g. https://your-api.onrender.com or http://localhost:3006)
  * Ensure a logo is uploaded in admin branding first.
  */
 
@@ -27,7 +27,7 @@ async function main() {
   let API_BASE = readEnvVar(appEnv, 'EXPO_PUBLIC_API_URL') || readEnvVar(rootEnv, 'EXPO_PUBLIC_API_URL') || process.env.EXPO_PUBLIC_API_URL || '';
   if (!directLogoUrl && !API_BASE) {
     console.error('Set EXPO_PUBLIC_API_URL or UPDATE_ICON_LOGO_URL in apps/customer-mobile/.env');
-    console.error('Or pass the logo URL: npm run update-icon-from-branding -- https://weyou-api.onrender.com/api/assets/branding/logo.png');
+    console.error('Or pass the logo URL: npm run update-icon-from-branding -- <API_BASE>/api/assets/branding/logo.png');
     process.exit(1);
   }
   const base = API_BASE ? API_BASE.replace(/\/$/, '') : '';
@@ -43,7 +43,7 @@ async function main() {
       if (res.status === 404) {
         console.error('GET /api/branding/public returned 404.');
         console.error('Use a direct logo URL instead:');
-        console.error('  npm run update-icon-from-branding -- https://weyou-api.onrender.com/api/assets/branding/YOUR_FILE.png');
+        console.error('  npm run update-icon-from-branding -- <API_BASE>/api/assets/branding/YOUR_FILE.png');
         console.error('(Get YOUR_FILE from the admin branding screen, or try logo.png / weyou-logo.png)');
       } else {
         console.error('Branding API returned', res.status, '- is the API running and does branding have a logo?');

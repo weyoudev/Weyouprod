@@ -1,10 +1,25 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
+// Server-side: prefer API_BASE_URL (Render backend). Fallback for local/dev.
+const getApiBase = (): string => {
+  const base =
+    process.env.API_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:3003/api';
+  return base.replace(/\/$/, '');
+};
+
+/** Ensure upstream URL always has /api prefix (backend expects /api/admin/...). */
+function buildUpstreamUrl(base: string, pathSegments: string[], search: string): string {
+  const path = pathSegments?.length ? pathSegments.join('/') : '';
+  const baseWithApi = base.endsWith('/api') ? base : `${base}/api`;
+  const fullPath = path ? `${baseWithApi}/${path}` : baseWithApi;
+  return `${fullPath}${search}`;
+}
 
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD']);
 
-/** Forward request to the real API so the browser stays same-origin (avoids CORS). */
+/** Forward request to the real API (Render) so the browser stays same-origin. */
 async function proxy(request: NextRequest, pathSegments: string[]) {
   const method = request.method;
 
@@ -16,9 +31,8 @@ async function proxy(request: NextRequest, pathSegments: string[]) {
     );
   }
 
-  const path = pathSegments?.length ? pathSegments.join('/') : '';
-  const base = API_BASE.replace(/\/$/, '');
-  const url = new URL(`${base}/${path}${request.nextUrl.search}`);
+  const base = getApiBase();
+  const url = buildUpstreamUrl(base, pathSegments, request.nextUrl.search);
 
   const headers = new Headers();
   const auth = request.headers.get('authorization');
@@ -36,7 +50,7 @@ async function proxy(request: NextRequest, pathSegments: string[]) {
   }
 
   try {
-    const res = await fetch(url.toString(), {
+    const res = await fetch(url, {
       method,
       headers,
       body: body || undefined,
@@ -52,7 +66,7 @@ async function proxy(request: NextRequest, pathSegments: string[]) {
     const responseBody = await res.text();
 
     if (!res.ok) {
-      console.error('[api-proxy] Upstream error:', res.status, method, url.pathname, responseBody.slice(0, 200));
+      console.error('[api-proxy] Upstream error:', res.status, method, url, responseBody.slice(0, 200));
     }
 
     return new NextResponse(responseBody, {
@@ -61,7 +75,7 @@ async function proxy(request: NextRequest, pathSegments: string[]) {
       headers: responseHeaders,
     });
   } catch (e) {
-    console.error('[api-proxy] Proxy error:', method, url.toString(), e);
+    console.error('[api-proxy] Proxy error:', method, url, e);
     return NextResponse.json(
       { error: 'Proxy request failed', details: e instanceof Error ? e.message : String(e) },
       { status: 502 }

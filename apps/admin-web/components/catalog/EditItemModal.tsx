@@ -27,6 +27,8 @@ import type {
   SegmentPriceInput,
 } from '@/types';
 import { Trash2, Plus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { catalogIcons } from '@/constants/catalogIcons';
 
 interface PriceLineRow {
   id: string;
@@ -69,6 +71,7 @@ export function EditItemModal({
 }: EditItemModalProps) {
   const [name, setName] = useState('');
   const [active, setActive] = useState(true);
+  const [icon, setIcon] = useState<string | ''>('');
   const [branchIds, setBranchIds] = useState<string[]>([]);
   const [rows, setRows] = useState<PriceLineRow[]>([]);
   const [error, setError] = useState<unknown>(null);
@@ -95,6 +98,7 @@ export function EditItemModal({
     if (item && open) {
       setName(item.name);
       setActive(item.active);
+      setIcon(item.icon ?? '');
       setBranchIds(item.branchIds ?? []);
       setRows(
         item.segmentPrices.map((p) => ({
@@ -164,7 +168,7 @@ export function EditItemModal({
     setError(null);
     const segmentPrices = buildSegmentPrices();
     updateMatrix.mutate(
-      { name: name.trim(), active, branchIds, segmentPrices },
+      { name: name.trim(), active, icon: icon || null, branchIds, segmentPrices },
       {
         onSuccess: () => {
           toast.success('Item updated');
@@ -302,6 +306,21 @@ export function EditItemModal({
                   {branches.length === 0 && (
                     <span className="text-muted-foreground text-sm">No branches. Add branches in Branding.</span>
                   )}
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <label className="text-sm font-medium">Icon (optional)</label>
+                  <Select value={icon} onValueChange={setIcon}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select icon" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {catalogIcons.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label} ({opt.value})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </div>

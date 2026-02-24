@@ -20,11 +20,14 @@ export declare enum OrderStatus {
     IN_PROCESSING = "IN_PROCESSING",
     READY = "READY",
     OUT_FOR_DELIVERY = "OUT_FOR_DELIVERY",
-    DELIVERED = "DELIVERED"
+    DELIVERED = "DELIVERED",
+    CANCELLED = "CANCELLED"
 }
 export declare enum OrderType {
     INDIVIDUAL = "INDIVIDUAL",
-    SUBSCRIPTION = "SUBSCRIPTION"
+    SUBSCRIPTION = "SUBSCRIPTION",
+    /** Laundry items + subscription (new or existing); subscription assigned at ACK by admin. */
+    BOTH = "BOTH"
 }
 export declare enum Role {
     CUSTOMER = "CUSTOMER",
@@ -36,6 +39,7 @@ export declare enum PaymentProvider {
     RAZORPAY = "RAZORPAY",
     CASH = "CASH",
     UPI = "UPI",
+    CARD = "CARD",
     NONE = "NONE"
 }
 export declare enum PaymentStatus {
@@ -50,7 +54,8 @@ export declare enum InvoiceOrderMode {
 }
 export declare enum InvoiceType {
     ACKNOWLEDGEMENT = "ACKNOWLEDGEMENT",
-    FINAL = "FINAL"
+    FINAL = "FINAL",
+    SUBSCRIPTION = "SUBSCRIPTION"
 }
 export declare enum InvoiceStatus {
     DRAFT = "DRAFT",
@@ -61,6 +66,10 @@ export declare enum SubscriptionVariant {
     SINGLE = "SINGLE",
     COUPLE = "COUPLE",
     FAMILY = "FAMILY"
+}
+export declare enum RedemptionMode {
+    MULTI_USE = "MULTI_USE",
+    SINGLE_USE = "SINGLE_USE"
 }
 export declare enum InvoiceItemType {
     SERVICE = "SERVICE",

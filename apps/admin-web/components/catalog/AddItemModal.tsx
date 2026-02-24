@@ -15,6 +15,8 @@ import { useCreateItem } from '@/hooks/useCatalog';
 import { toast } from 'sonner';
 import { getFriendlyErrorMessage } from '@/lib/api';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { catalogIcons } from '@/constants/catalogIcons';
 
 interface AddItemModalProps {
   open: boolean;
@@ -24,6 +26,7 @@ interface AddItemModalProps {
 export function AddItemModal({ open, onOpenChange }: AddItemModalProps) {
   const [name, setName] = useState('');
   const [active, setActive] = useState(true);
+  const [icon, setIcon] = useState<string | ''>('');
   const [error, setError] = useState<unknown>(null);
   const createItem = useCreateItem();
 
@@ -35,12 +38,13 @@ export function AddItemModal({ open, onOpenChange }: AddItemModalProps) {
     }
     setError(null);
     createItem.mutate(
-      { name: name.trim(), active },
+      { name: name.trim(), active, icon: icon || null },
       {
         onSuccess: () => {
           toast.success('Item added');
           setName('');
           setActive(true);
+          setIcon('');
           setError(null);
           onOpenChange(false);
         },
@@ -71,6 +75,21 @@ export function AddItemModal({ open, onOpenChange }: AddItemModalProps) {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Item name"
               />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Icon (optional)</label>
+              <Select value={icon} onValueChange={setIcon}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select icon" />
+                </SelectTrigger>
+                <SelectContent>
+                  {catalogIcons.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label} ({opt.value})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-2">
               <Switch id="add-active" checked={active} onCheckedChange={setActive} />

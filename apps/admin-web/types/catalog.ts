@@ -12,6 +12,8 @@ export interface LaundryItem {
   id: string;
   name: string;
   active: boolean;
+  /** Optional icon name associated with this catalog item. */
+  icon?: string | null;
   createdAt: string;
   updatedAt: string;
   /** When returned from API with prices (e.g. single item or list) */
@@ -51,6 +53,7 @@ export interface CatalogItemWithMatrix {
   id: string;
   name: string;
   active: boolean;
+  icon?: string | null;
   branchIds: string[];
   createdAt: string;
   updatedAt: string;
@@ -73,6 +76,7 @@ export interface SegmentPriceInput {
 export interface UpdateItemWithMatrixBody {
   name?: string;
   active?: boolean;
+  icon?: string | null;
   branchIds?: string[];
   segmentPrices: SegmentPriceInput[];
 }
@@ -80,11 +84,13 @@ export interface UpdateItemWithMatrixBody {
 export interface CreateItemBody {
   name: string;
   active?: boolean;
+  icon?: string | null;
 }
 
 export interface PatchItemBody {
   name?: string;
   active?: boolean;
+  icon?: string | null;
 }
 
 export interface PriceItemBody {

@@ -8,4 +8,8 @@ export class PatchItemDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @IsOptional()
+  @IsString()
+  icon?: string;
 }

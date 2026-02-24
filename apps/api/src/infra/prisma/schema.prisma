@@ -143,6 +143,8 @@ model LaundryItem {
   id              String                   @id @default(uuid())
   name            String                   @unique
   active          Boolean                  @default(true)
+  /// Optional icon name for this catalog item (MaterialCommunityIcons key, e.g. "tshirt-crew")
+  icon            String?
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   prices          LaundryItemPrice[]

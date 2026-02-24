@@ -36,16 +36,18 @@ export function useSystemStatus(): SystemStatusResult {
     const token = typeof window !== 'undefined' ? getToken() : null;
     const user = typeof window !== 'undefined' ? getStoredUser() : null;
 
-    // 1) API reachable (GET /) — use getBaseURL() so Render admin uses same-origin proxy
+    // 1) API reachable — GET /api/health (or /health via proxy) so we hit a known GET endpoint and avoid 405
     const apiBase = getBaseURL();
-    const apiRoot = apiBase.startsWith('http') ? `${apiBase.replace(/\/$/, '')}/` : `${typeof window !== 'undefined' ? window.location.origin : ''}${apiBase}/`;
+    const healthUrl = apiBase.startsWith('http')
+      ? `${apiBase.replace(/\/$/, '')}/health`
+      : `${typeof window !== 'undefined' ? window.location.origin : ''}${apiBase}/health`;
     try {
-      const res = await fetch(apiRoot, { method: 'GET', signal: AbortSignal.timeout(5000) });
+      const res = await fetch(healthUrl, { method: 'GET', signal: AbortSignal.timeout(5000) });
       if (res.ok) {
         setApiState('green');
       } else {
         setApiState('yellow');
-        setLastError(`GET / returned ${res.status}`);
+        setLastError(`GET /health returned ${res.status}`);
       }
     } catch (e) {
       setApiState('red');

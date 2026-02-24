@@ -23,6 +23,7 @@ export interface UpdateCatalogItemWithMatrixInput {
   itemId: string;
   name?: string;
   active?: boolean;
+  icon?: string | null;
   segmentPrices: SegmentPriceInput[];
 }
 
@@ -43,9 +44,10 @@ export async function updateCatalogItemWithMatrix(
     throw new AppError('ITEM_NOT_FOUND', 'Laundry item not found', { itemId: input.itemId });
   }
 
-  const patch: { name?: string; active?: boolean } = {};
+  const patch: { name?: string; active?: boolean; icon?: string | null } = {};
   if (input.name !== undefined) patch.name = input.name.trim();
   if (input.active !== undefined) patch.active = input.active;
+  if (input.icon !== undefined) patch.icon = input.icon;
 
   if (Object.keys(patch).length > 0) {
     await deps.laundryItemsRepo.update(input.itemId, patch);

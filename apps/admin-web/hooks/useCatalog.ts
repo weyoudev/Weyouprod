@@ -84,7 +84,9 @@ export function useUpdateItemWithMatrix(itemId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: UpdateItemWithMatrixBody) =>
-      api.put<{ item: LaundryItem; segmentPrices: unknown[] }>(`/admin/catalog/items/${itemId}`, body).then((r) => r.data),
+      api
+        .put<{ item: LaundryItem; segmentPrices: unknown[] }>(`/admin/catalog/items/${itemId}`, body)
+        .then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: CATALOG_MATRIX_KEY });
       qc.invalidateQueries({ queryKey: ['admin', 'items'] });

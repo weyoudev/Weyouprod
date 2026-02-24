@@ -307,22 +307,23 @@ export function EditItemModal({
                     <span className="text-muted-foreground text-sm">No branches. Add branches in Branding.</span>
                   )}
                 </div>
-                <div className="flex-1 min-w-[200px]">
-                  <label className="text-sm font-medium">Icon (optional)</label>
-                  <Select value={icon} onValueChange={setIcon}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select icon" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {catalogIcons.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label} ({opt.value})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               )}
+            </div>
+
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Icon (optional)</label>
+              <Select value={icon} onValueChange={setIcon}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select icon" />
+                </SelectTrigger>
+                <SelectContent>
+                  {catalogIcons.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label} ({opt.value})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex flex-wrap items-end gap-4">

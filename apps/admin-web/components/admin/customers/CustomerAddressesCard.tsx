@@ -26,7 +26,7 @@ export function CustomerAddressesCard({ customer }: CustomerAddressesCardProps) 
         ) : (
           <ul className="space-y-4">
             {addresses.map((addr) => {
-              const mapsUrl = getGoogleMapsUrl(addr.addressLine, addr.pincode);
+              const mapsUrl = getGoogleMapsUrl(addr.googleMapUrl);
               return (
                 <li
                   key={addr.id}
@@ -46,7 +46,7 @@ export function CustomerAddressesCard({ customer }: CustomerAddressesCardProps) 
                   <div className="mt-0.5 text-muted-foreground">
                     Pincode: {addr.pincode}
                   </div>
-                  {mapsUrl && (
+                  {mapsUrl ? (
                     <a
                       href={mapsUrl}
                       target="_blank"
@@ -56,6 +56,8 @@ export function CustomerAddressesCard({ customer }: CustomerAddressesCardProps) 
                       <ExternalLink className="h-3.5 w-3.5" />
                       View on Google Maps
                     </a>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-2">No Google Maps link saved</p>
                   )}
                 </li>
               );

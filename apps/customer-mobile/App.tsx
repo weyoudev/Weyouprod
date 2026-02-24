@@ -131,6 +131,7 @@ export default function App() {
   const [addIsDefault, setAddIsDefault] = useState(false);
   const [serviceability, setServiceability] = useState<{ serviceable: boolean; message?: string } | null>(null);
   const [checkingServiceability, setCheckingServiceability] = useState(false);
+  const lastCheckedPincodeRef = useRef<string | null>(null);
   const [areaRequestSent, setAreaRequestSent] = useState(false);
   const [bookingStep, setBookingStep] = useState<BookingStep>('address');
   const [bookingAddressId, setBookingAddressId] = useState<string | null>(null);
@@ -849,6 +850,18 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    const pc = addPincode.trim().replace(/\D/g, '').slice(0, 6);
+    if (pc.length !== 6) {
+      setServiceability(null);
+      lastCheckedPincodeRef.current = null;
+      return;
+    }
+    if (lastCheckedPincodeRef.current === pc) return;
+    lastCheckedPincodeRef.current = pc;
+    checkPincodeServiceability();
+  }, [addPincode]);
+
   const handleSaveAddress = async () => {
     setError(null);
     const houseNo = addHouseNo.trim();
@@ -1448,15 +1461,6 @@ export default function App() {
               keyboardType="number-pad"
               maxLength={6}
             />
-            <TouchableOpacity
-              style={[styles.buttonSecondary, checkingServiceability && styles.buttonDisabled]}
-              onPress={checkPincodeServiceability}
-              disabled={checkingServiceability || addPincode.trim().replace(/\D/g, '').length !== 6}
-            >
-              <Text style={styles.buttonSecondaryText}>
-                {checkingServiceability ? 'Checking…' : 'Check if we serve this area'}
-              </Text>
-            </TouchableOpacity>
             {serviceability !== null && (
               <View style={[styles.serviceabilityBox, !serviceability.serviceable && styles.serviceabilityBoxNotServiceable]}>
                 {serviceability.serviceable ? (

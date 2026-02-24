@@ -183,7 +183,7 @@ export function createFakeOrdersRepo(initial: OrderRecord[] = []): OrdersRepo & 
       return {
         order,
         customer: { id: order.userId, name: null, phone: null, email: null },
-        address: { id: '', label: '', addressLine: '', pincode: order.pincode },
+        address: { id: '', label: '', addressLine: '', pincode: order.pincode, googleMapUrl: null },
         branch: null,
         orderItems: [],
         subscription: null,

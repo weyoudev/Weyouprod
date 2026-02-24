@@ -30,6 +30,7 @@ export interface AdminCustomerAddress {
   addressLine: string;
   pincode: string;
   isDefault: boolean;
+  googleMapUrl?: string | null;
 }
 
 /** Customer record as returned by GET /admin/customers/:userId. */
@@ -150,6 +151,7 @@ export class AdminCustomersService {
         addressLine: a.addressLine,
         pincode: a.pincode,
         isDefault: a.isDefault,
+        googleMapUrl: a.googleMapUrl ?? null,
       }));
     return { ...customer, addresses, subscription, activeSubscriptions, pastSubscriptions };
   }

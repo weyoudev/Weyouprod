@@ -548,6 +548,7 @@ export class PrismaOrdersRepo implements OrdersRepo {
         label: address ? address.label : (orderWithSnapshot.addressLabel ?? ''),
         addressLine: address ? address.addressLine : (orderWithSnapshot.addressLine ?? ''),
         pincode: address ? address.pincode : (order.pincode ?? ''),
+        googleMapUrl: address ? (address as { googleMapUrl?: string | null }).googleMapUrl ?? null : null,
       },
       branch: branchForSummary,
       orderItems: order.orderItems.map((oi) => ({

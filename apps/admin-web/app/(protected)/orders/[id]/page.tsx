@@ -312,7 +312,8 @@ export default function OrderDetailPage() {
   const ackInvoice = invoices.find((i) => i.type === 'ACKNOWLEDGEMENT');
   const finalInvoice = invoices.find((i) => i.type === 'FINAL');
   const customer = summary.customer ?? { id: '', name: null, phone: null, email: null };
-  const address = summary.address ?? { id: '', label: '', addressLine: '', pincode: '' };
+  const address = summary.address ?? { id: '', label: '', addressLine: '', pincode: '', googleMapUrl: null };
+  const mapsUrl = getGoogleMapsUrl(address.googleMapUrl);
   const isDelivered = order.status === 'DELIVERED';
   const canIssueFinalInvoice =
     order.status === 'OUT_FOR_DELIVERY' ||
@@ -723,20 +724,19 @@ export default function OrderDetailPage() {
                 <p>{address.label}</p>
                 <p>{address.addressLine}</p>
                 <p>{address.pincode}</p>
-                {(() => {
-                  const mapsUrl = getGoogleMapsUrl(address.addressLine, address.pincode);
-                  return mapsUrl ? (
-                    <a
-                      href={mapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-1"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      View on Google Maps
-                    </a>
-                  ) : null;
-                })()}
+                {mapsUrl ? (
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-1"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    View on Google Maps
+                  </a>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1">No Google Maps link saved</p>
+                )}
               </>
             )}
           </div>
@@ -955,20 +955,19 @@ export default function OrderDetailPage() {
               {order.orderSource !== 'WALK_IN' && (
                 <p>
                   {address.addressLine}, {address.pincode}
-                  {(() => {
-                    const mapsUrl = getGoogleMapsUrl(address.addressLine, address.pincode);
-                    return mapsUrl ? (
-                      <a
-                        href={mapsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-1.5 inline-flex items-center gap-0.5 text-primary hover:underline text-xs"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        Map
-                      </a>
-                    ) : null;
-                  })()}
+                  {mapsUrl ? (
+                    <a
+                      href={mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-1.5 inline-flex items-center gap-0.5 text-primary hover:underline text-xs"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Map
+                    </a>
+                  ) : (
+                    <span className="ml-1.5 text-xs text-muted-foreground">No Google Maps link saved</span>
+                  )}
                 </p>
               )}
               <p className="text-muted-foreground">
@@ -1315,20 +1314,19 @@ export default function OrderDetailPage() {
               {order.orderSource !== 'WALK_IN' && (
                 <p>
                   {address.addressLine}, {address.pincode}
-                  {(() => {
-                    const mapsUrl = getGoogleMapsUrl(address.addressLine, address.pincode);
-                    return mapsUrl ? (
-                      <a
-                        href={mapsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-1.5 inline-flex items-center gap-0.5 text-primary hover:underline text-xs"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        Map
-                      </a>
-                    ) : null;
-                  })()}
+                  {mapsUrl ? (
+                    <a
+                      href={mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-1.5 inline-flex items-center gap-0.5 text-primary hover:underline text-xs"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Map
+                    </a>
+                  ) : (
+                    <span className="ml-1.5 text-xs text-muted-foreground">No Google Maps link saved</span>
+                  )}
                 </p>
               )}
               <p className="text-muted-foreground">

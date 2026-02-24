@@ -5,6 +5,8 @@ export interface CustomerAddress {
   addressLine: string;
   pincode: string;
   isDefault: boolean;
+  /** Optional Google Maps URL saved from the mobile app. */
+  googleMapUrl?: string | null;
 }
 
 /** Subscription info when returned with customer detail (backend may include it) */

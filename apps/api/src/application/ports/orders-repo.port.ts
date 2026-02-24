@@ -99,7 +99,7 @@ export interface AdminOrdersResult {
 export interface OrderAdminSummary {
   order: OrderRecord;
   customer: { id: string; name: string | null; phone: string | null; email: string | null };
-  address: { id: string; label: string; addressLine: string; pincode: string };
+  address: { id: string; label: string; addressLine: string; pincode: string; googleMapUrl?: string | null };
   /** Branch (from order.branchId, e.g. resolved by pincode when order was created). Includes branch id for catalog filtering and GST/PAN for invoices. */
   branch: { id: string; name: string; address: string; gstNumber?: string | null; panNumber?: string | null } | null;
   orderItems: Array<{

@@ -117,6 +117,8 @@ export interface OrderAdminSummary {
     label: string;
     addressLine: string;
     pincode: string;
+    /** Optional Google Maps URL saved from the mobile app. */
+    googleMapUrl?: string | null;
   };
   branch: { id: string; name: string; address: string; gstNumber?: string | null; panNumber?: string | null } | null;
   orderItems: Array<{

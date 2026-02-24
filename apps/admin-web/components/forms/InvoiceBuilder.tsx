@@ -511,15 +511,15 @@ export function InvoiceBuilder({
                               }}
                             >
                               <SelectTrigger className="h-8 w-full max-w-[160px]">
-                                <span className="flex items-center gap-2 min-h-0">
+                                <span className="flex items-center gap-2 min-h-0 min-w-0">
                                   {(() => {
                                     const it = catalogMatrix.items.find((x) => x.id === row.catalogItemId);
                                     return it ? (
                                       <>
-                                        <span className="flex shrink-0 items-center justify-center self-center">
-                                          <CatalogItemIcon icon={it.icon} size={18} className="shrink-0" />
+                                        <span className="flex shrink-0 items-center">
+                                          <CatalogItemIcon icon={it.icon} size={18} className="shrink-0 inline-block align-middle" />
                                         </span>
-                                        <SelectValue>{it.name}</SelectValue>
+                                        <SelectValue className="truncate">{it.name}</SelectValue>
                                       </>
                                     ) : (
                                       <SelectValue placeholder="Item" />
@@ -531,10 +531,10 @@ export function InvoiceBuilder({
                                 {catalogMatrix.items.filter((x) => x.active).map((x) => (
                                   <SelectItem key={x.id} value={x.id}>
                                     <span className="flex items-center gap-2">
-                                      <span className="flex shrink-0 items-center justify-center self-center">
-                                        <CatalogItemIcon icon={x.icon} size={18} className="shrink-0" />
+                                      <span className="flex shrink-0 items-center">
+                                        <CatalogItemIcon icon={x.icon} size={18} className="shrink-0 inline-block align-middle" />
                                       </span>
-                                      {x.name}
+                                      <span className="truncate">{x.name}</span>
                                     </span>
                                   </SelectItem>
                                 ))}
@@ -547,10 +547,10 @@ export function InvoiceBuilder({
                                 : null;
                               return it ? (
                                 <span className="flex items-center gap-2">
-                                  <span className="flex shrink-0 items-center justify-center self-center">
-                                    <CatalogItemIcon icon={it.icon} size={18} className="shrink-0" />
+                                  <span className="flex shrink-0 items-center">
+                                    <CatalogItemIcon icon={it.icon} size={18} className="shrink-0 inline-block align-middle" />
                                   </span>
-                                  {row.name}
+                                  <span className="truncate">{row.name}</span>
                                 </span>
                               ) : (
                                 row.name

@@ -54,11 +54,11 @@ export function CatalogItemIcon({ icon, size = 22, className }: CatalogItemIconP
         alt=""
         width={size}
         height={size}
-        className={cn('align-middle', className)}
-        style={{ width: size, height: size, objectFit: 'contain', verticalAlign: 'middle' }}
+        className={cn('inline-block align-middle shrink-0', className)}
+        style={{ width: size, height: size, objectFit: 'contain', verticalAlign: 'middle', display: 'inline-block' }}
       />
     );
   }
   const IconComponent = ICON_MAP[icon] ?? DEFAULT_ICON;
-  return <IconComponent size={size} className={className} />;
+  return <IconComponent size={size} className={cn('shrink-0 inline-block align-middle', className)} />;
 }

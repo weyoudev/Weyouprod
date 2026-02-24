@@ -9,6 +9,7 @@ import type { ServiceType } from '@/types/order';
 import { formatMoney } from '@/lib/format';
 import { getApiOrigin } from '@/lib/api';
 import { getToken } from '@/lib/auth';
+import { AddItemsToInvoiceDialog } from './AddItemsToInvoiceDialog';
 
 const ITEM_TYPES: InvoiceItemType[] = ['SERVICE', 'FEE', 'ADDON', 'DRYCLEAN_ITEM', 'DISCOUNT'];
 
@@ -161,6 +162,7 @@ export function InvoiceBuilder({
   const [matrixSegmentId, setMatrixSegmentId] = useState('');
   const [matrixServiceId, setMatrixServiceId] = useState('');
   const [matrixQty, setMatrixQty] = useState(1);
+  const [addItemsDialogOpen, setAddItemsDialogOpen] = useState(false);
 
   const catalogItemsForService =
     catalog?.filter(
@@ -662,77 +664,22 @@ export function InvoiceBuilder({
         <div className="flex flex-wrap items-end gap-2">
           {useMatrix && catalogMatrix ? (
             <>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Item</label>
-                <select
-                  className="h-9 min-w-[140px] rounded-md border px-2 text-sm"
-                  value={matrixItemId}
-                  onChange={(e) => {
-                    setMatrixItemId(e.target.value);
-                    setMatrixSegmentId('');
-                    setMatrixServiceId('');
-                  }}
-                >
-                  <option value="">Item</option>
-                  {catalogMatrix.items.filter((i) => i.active).map((i) => (
-                    <option key={i.id} value={i.id}>{i.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Segment</label>
-                <select
-                  className="h-9 min-w-[120px] rounded-md border px-2 text-sm"
-                  value={matrixSegmentId}
-                  onChange={(e) => {
-                    setMatrixSegmentId(e.target.value);
-                    setMatrixServiceId('');
-                  }}
-                  disabled={!matrixItemId}
-                >
-                  <option value="">Segment</option>
-                  {matrixSegmentsForItem.map((s) => (
-                    <option key={s.id} value={s.id}>{s.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Service</label>
-                <select
-                  className="h-9 min-w-[120px] rounded-md border px-2 text-sm"
-                  value={matrixServiceId}
-                  onChange={(e) => setMatrixServiceId(e.target.value)}
-                  disabled={!matrixSegmentId}
-                >
-                  <option value="">Service</option>
-                  {matrixServicesForItemSegment.map((s) => (
-                    <option key={s.id} value={s.id}>{s.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Qty</label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={matrixQty}
-                  onChange={(e) => setMatrixQty(Number(e.target.value) || 1)}
-                  className="h-9 w-16"
-                />
-              </div>
-              <span className="text-sm text-muted-foreground">₹{((matrixPricePaise / 100) * matrixQty).toFixed(2)}</span>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addLine}
-                disabled={!matrixItemId || !matrixSegmentId || !matrixServiceId}
+                onClick={() => setAddItemsDialogOpen(true)}
               >
-                Add line
+                Add items
               </Button>
-              {matrixItemId && (matrixSegmentsForItem.length === 0 || (matrixSegmentId && matrixServicesForItemSegment.length === 0)) && (
-                <p className="text-xs text-muted-foreground w-full">Add Segments and Services with prices in Catalog (Manage Services & Segments) to add this line.</p>
-              )}
+              <AddItemsToInvoiceDialog
+                open={addItemsDialogOpen}
+                onOpenChange={setAddItemsDialogOpen}
+                catalogMatrix={catalogMatrix}
+                onAddLine={(line) => {
+                  onItemsChange([...items, line]);
+                }}
+              />
             </>
           ) : useCatalog ? (
             <>

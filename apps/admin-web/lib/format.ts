@@ -16,6 +16,27 @@ export function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
+/**
+ * Return YYYY-MM-DD for the **local** calendar date of an ISO timestamp.
+ * Use this when grouping or filtering by "day" so UTC timestamps (e.g. 25 Feb 03:39 IST = 24 Feb 22:09 UTC)
+ * show under the correct local date (25th), not the UTC date (24th).
+ */
+export function isoToLocalDateKey(iso: string | null | undefined): string | null {
+  if (!iso || typeof iso !== 'string') return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Today's date as YYYY-MM-DD in local timezone (for default values and ranges). */
+export function getTodayLocalDateKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat('en-IN', {
     dateStyle: 'short',

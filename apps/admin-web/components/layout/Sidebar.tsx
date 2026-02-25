@@ -6,8 +6,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { logout, type AuthUser } from '@/lib/auth';
 import { canAccessRoute } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, getApiOrigin } from '@/lib/api';
 import { useSystemStatus } from '@/hooks/use-system-status';
+import { useBranding } from '@/hooks/useBranding';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
@@ -73,7 +74,11 @@ export function Sidebar({ user, collapsed = false, onToggleCollapse, mobileOpen 
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const { api, auth, db, dbInfo, lastError, checking, refresh } = useSystemStatus();
+  const { data: branding } = useBranding();
   const navItems = NAV.filter((item) => canAccessRoute(user.role, item.href));
+  const logoUrl = branding?.logoUrl
+    ? (branding.logoUrl.startsWith('http') ? branding.logoUrl : `${getApiOrigin()}${branding.logoUrl}`)
+    : null;
 
   const handleInvalidate = () => {
     queryClient.invalidateQueries();
@@ -83,8 +88,18 @@ export function Sidebar({ user, collapsed = false, onToggleCollapse, mobileOpen 
   const sidebarContent = (
     <>
       <div className="flex h-14 shrink-0 items-center justify-between border-b px-3">
-        {!collapsed && <span className="font-semibold truncate">Laundry Admin</span>}
-        {collapsed && <span className="font-semibold truncate" title="Laundry Admin">LA</span>}
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt="Logo"
+            className={cn('h-8 w-auto object-contain object-left', collapsed ? 'max-w-[2rem]' : 'max-w-[140px]')}
+          />
+        ) : (
+          <>
+            {!collapsed && <span className="font-semibold truncate">Laundry Admin</span>}
+            {collapsed && <span className="font-semibold truncate" title="Laundry Admin">LA</span>}
+          </>
+        )}
         <div className="flex items-center gap-1">
           {onToggleCollapse && (
             <Button

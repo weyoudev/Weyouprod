@@ -16,6 +16,7 @@ import { FormField } from '@/components/ui/form-field';
 import { useSubscriptionOverride } from '@/hooks/useCustomers';
 import { toast } from 'sonner';
 import type { CustomerSubscriptionInfo } from '@/types';
+import { isoToLocalDateKey } from '@/lib/format';
 import type { AxiosError } from 'axios';
 import { Loader2 } from 'lucide-react';
 
@@ -30,12 +31,8 @@ const overrideSchema = z.object({
 type OverrideFormValues = z.infer<typeof overrideSchema>;
 
 function toDateInputValue(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toISOString().slice(0, 10);
-  } catch {
-    return '';
-  }
+  const key = isoToLocalDateKey(iso);
+  return key ?? '';
 }
 
 export interface SubscriptionOverrideModalProps {

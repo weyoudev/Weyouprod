@@ -8,6 +8,8 @@ import { isOpsDeniedRoute, OPS_DEFAULT_REDIRECT } from '@/lib/permissions';
 import { Sidebar } from './Sidebar';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
+import { useBranding } from '@/hooks/useBranding';
+import { getApiOrigin } from '@/lib/api';
 
 export function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -16,6 +18,10 @@ export function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const [checking, setChecking] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { data: branding } = useBranding();
+  const logoUrl = branding?.logoUrl
+    ? (branding.logoUrl.startsWith('http') ? branding.logoUrl : `${getApiOrigin()}${branding.logoUrl}`)
+    : null;
 
   useEffect(() => {
     const token = getToken();
@@ -73,7 +79,11 @@ export function ProtectedLayout({ children }: { children: React.ReactNode }) {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <span className="font-semibold text-sm truncate">Laundry Admin</span>
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="h-7 w-auto max-w-[120px] object-contain object-left" />
+            ) : (
+              <span className="font-semibold text-sm truncate">Laundry Admin</span>
+            )}
           </div>
           <main className="flex-1 overflow-auto p-4 sm:p-6 min-h-0">{children}</main>
         </div>

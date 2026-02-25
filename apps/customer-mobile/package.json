@@ -8,8 +8,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "build:android:beta": "eas build --platform android --profile preview",
-    "build:android:production": "eas build --platform android --profile production",
+    "build:android:beta": "node scripts/update-icon-from-branding.js && eas build --platform android --profile preview",
+    "build:android:production": "node scripts/update-icon-from-branding.js && eas build --platform android --profile production",
+    "build:android:apk": "node scripts/update-icon-from-branding.js && eas build --platform android --profile preview",
     "build:ios:beta": "eas build --platform ios --profile preview",
     "build:ios:production": "eas build --platform ios --profile production",
     "update-icon-from-branding": "node scripts/update-icon-from-branding.js"

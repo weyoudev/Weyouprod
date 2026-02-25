@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { OrderStatusBadge } from '@/components/shared/StatusBadge';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, isoToLocalDateKey } from '@/lib/format';
 import type { AdminOrderListRow, OrderStatus } from '@/types';
 
 const DASHBOARD_STATUS_CHIPS: { status: OrderStatus | 'CONFIRMED'; label: string }[] = [
@@ -33,10 +33,9 @@ function toDateKey(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Normalize date from API (ISO string) to YYYY-MM-DD. */
+/** Normalize status timestamp from API to local calendar date YYYY-MM-DD (avoids UTC date off-by-one). */
 function dateKeyFromIso(iso: string | null | undefined): string | null {
-  if (!iso || typeof iso !== 'string') return null;
-  return iso.length >= 10 ? iso.slice(0, 10) : null;
+  return isoToLocalDateKey(iso);
 }
 
 function pickupDateKey(pickupDate: string): string {
@@ -78,7 +77,7 @@ export default function DashboardPage() {
   const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>(() =>
     isBranchHead && user?.branchId ? [user.branchId] : []
   );
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'CONFIRMED' | ''>('');
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'CONFIRMED' | ''>('CONFIRMED');
 
   useEffect(() => {
     if (isBranchHead && user?.branchId) setSelectedBranchIds([user.branchId]);

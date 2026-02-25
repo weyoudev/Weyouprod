@@ -75,7 +75,7 @@ async function main() {
   fs.writeFileSync(splashPath, buf);
   fs.writeFileSync(faviconPath, buf);
   console.log('Updated icon, adaptive-icon, splash-icon, and favicon from branding logo.');
-  console.log('Rebuild the app (or restart Expo) to see the new icon.');
+  console.log('APK/IPA and app launcher icon will use this logo. Rebuild the app (or run a new EAS build) to see it.');
 }
 
 main().catch((e) => {

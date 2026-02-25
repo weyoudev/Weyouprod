@@ -510,16 +510,18 @@ export function InvoiceBuilder({
                                 });
                               }}
                             >
-                              <SelectTrigger className="h-8 w-full max-w-[160px]">
-                                <span className="flex items-center gap-2 min-h-0 min-w-0">
+                              <SelectTrigger className="h-8 w-full max-w-[160px] [&>span]:!flex [&>span]:!flex-row [&>span]:!items-center">
+                                <span className="flex flex-row items-center gap-2 min-h-0 min-w-0 flex-1 overflow-hidden">
                                   {(() => {
                                     const it = catalogMatrix.items.find((x) => x.id === row.catalogItemId);
                                     return it ? (
                                       <>
-                                        <span className="flex shrink-0 items-center">
-                                          <CatalogItemIcon icon={it.icon} size={18} className="shrink-0 inline-block align-middle" />
+                                        <span className="flex shrink-0 items-center justify-center">
+                                          <CatalogItemIcon icon={it.icon} size={18} className="shrink-0" />
                                         </span>
-                                        <SelectValue className="truncate">{it.name}</SelectValue>
+                                        <span className="min-w-0 truncate text-left">
+                                          <SelectValue className="truncate">{it.name}</SelectValue>
+                                        </span>
                                       </>
                                     ) : (
                                       <SelectValue placeholder="Item" />

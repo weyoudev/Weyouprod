@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InvoiceBuilder, type InvoiceLineRow } from '@/components/forms/InvoiceBuilder';
-import { formatMoney, formatDate, getGoogleMapsUrl } from '@/lib/format';
+import { formatMoney, formatDate, getGoogleMapsUrl, getTodayLocalDateKey } from '@/lib/format';
 import { getApiOrigin, getFriendlyErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { computeSubscriptionPreview, parseAckItems, parseAckKg } from '@/lib/subscription-preview';
@@ -82,7 +82,7 @@ export default function OrderDetailPage() {
   const [ackWeightKg, setAckWeightKg] = useState<number | ''>('');
   const [ackItemsCount, setAckItemsCount] = useState<number | ''>('');
   const [ackNewSubscriptionPlanId, setAckNewSubscriptionPlanId] = useState('');
-  const [ackNewSubscriptionStartDate, setAckNewSubscriptionStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [ackNewSubscriptionStartDate, setAckNewSubscriptionStartDate] = useState(() => getTodayLocalDateKey());
   const [ackNewSubscriptionQuantityMonths, setAckNewSubscriptionQuantityMonths] = useState<number>(1);
   type NewSubEntry = { id: string; planId: string; validityStartDate: string; quantityMonths: number };
   const [ackNewSubscriptions, setAckNewSubscriptions] = useState<NewSubEntry[]>([]);

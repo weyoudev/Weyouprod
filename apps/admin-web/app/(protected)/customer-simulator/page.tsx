@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { getBaseURL } from '@/lib/api';
+import { getTodayLocalDateKey } from '@/lib/format';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { ExternalLink } from 'lucide-react';
@@ -306,7 +307,7 @@ export default function CustomerSimulatorPage() {
   const [bookingType, setBookingType] = useState<BookingType>('individual');
   const [selectedServices, setSelectedServices] = useState<(typeof BOOKABLE_SERVICES)[number][]>(['WASH_FOLD']);
   const [timeWindow, setTimeWindow] = useState(DEFAULT_TIME_SLOT);
-  const [pickupDate, setPickupDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [pickupDate, setPickupDate] = useState(() => getTodayLocalDateKey());
   const [estimatedWeightKg, setEstimatedWeightKg] = useState(3);
 
   const [addressLabel, setAddressLabel] = useState('Home');
@@ -328,7 +329,7 @@ export default function CustomerSimulatorPage() {
   const [confirmOrderOtpLoading, setConfirmOrderOtpLoading] = useState(false);
   const [confirmOrderRequestId, setConfirmOrderRequestId] = useState<string | null>(null);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayLocalDateKey();
   const isToday = pickupDate === today;
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();

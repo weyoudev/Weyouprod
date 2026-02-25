@@ -598,7 +598,7 @@ export interface OrderDetail extends OrderSummary {
   paymentStatus?: string;
 }
 
-/** Invoice line item (amounts in paise). */
+/** Invoice line item (amounts in paise). icon from catalog (preset key or URL path). */
 export interface OrderInvoiceItem {
   id: string;
   type: string;
@@ -606,6 +606,8 @@ export interface OrderInvoiceItem {
   quantity: number;
   unitPrice: number;
   amount: number;
+  catalogItemId?: string | null;
+  icon?: string | null;
 }
 
 export interface OrderInvoice {

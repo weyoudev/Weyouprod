@@ -18,6 +18,7 @@ import type {
   OperatingHoursRepo,
   FeedbackRepo,
   InvoicesRepo,
+  LaundryItemsRepo,
 } from '../../application/ports';
 import {
   ORDERS_REPO,
@@ -31,6 +32,7 @@ import {
   OPERATING_HOURS_REPO,
   FEEDBACK_REPO,
   INVOICES_REPO,
+  LAUNDRY_ITEMS_REPO,
 } from '../../infra/infra.module';
 import type { AuthUser } from '../common/roles.guard';
 import { AppError } from '../../application/errors';
@@ -49,12 +51,14 @@ export class OrdersService {
     @Inject(OPERATING_HOURS_REPO) private readonly operatingHoursRepo: OperatingHoursRepo,
     @Inject(FEEDBACK_REPO) private readonly feedbackRepo: FeedbackRepo,
     @Inject(INVOICES_REPO) private readonly invoicesRepo: InvoicesRepo,
+    @Inject(LAUNDRY_ITEMS_REPO) private readonly laundryItemsRepo: LaundryItemsRepo,
   ) {}
 
   async listInvoicesForOrder(orderId: string, user: AuthUser) {
     return listInvoicesForOrder(orderId, user.id, {
       ordersRepo: this.ordersRepo,
       invoicesRepo: this.invoicesRepo,
+      laundryItemsRepo: this.laundryItemsRepo,
     });
   }
 

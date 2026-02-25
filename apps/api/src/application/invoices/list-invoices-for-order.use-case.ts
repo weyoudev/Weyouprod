@@ -1,14 +1,16 @@
 import { AppError } from '../errors';
-import type { OrdersRepo, InvoicesRepo } from '../ports';
+import type { OrdersRepo, InvoicesRepo, LaundryItemsRepo } from '../ports';
 
 export interface ListInvoicesForOrderDeps {
   ordersRepo: OrdersRepo;
   invoicesRepo: InvoicesRepo;
+  laundryItemsRepo?: LaundryItemsRepo;
 }
 
 /**
  * Returns invoices for an order. Caller must be the order owner (userId).
  * Throws ORDER_NOT_FOUND or ORDER_ACCESS_DENIED.
+ * When laundryItemsRepo is provided, each item with catalogItemId gets its icon from the catalog.
  */
 export async function listInvoicesForOrder(
   orderId: string,
@@ -23,6 +25,19 @@ export async function listInvoicesForOrder(
     throw new AppError('ORDER_ACCESS_DENIED', 'Not allowed to view this order');
   }
   const invoices = await deps.invoicesRepo.findByOrderId(orderId);
+  const catalogItemIds = new Set<string>();
+  for (const inv of invoices) {
+    for (const item of inv.items ?? []) {
+      if (item.catalogItemId) catalogItemIds.add(item.catalogItemId);
+    }
+  }
+  const iconMap: Record<string, string | null> = {};
+  if (deps.laundryItemsRepo && catalogItemIds.size > 0) {
+    for (const id of catalogItemIds) {
+      const catalogItem = await deps.laundryItemsRepo.getById(id);
+      iconMap[id] = catalogItem?.icon ?? null;
+    }
+  }
   return invoices.map((inv) => ({
     id: inv.id,
     type: inv.type,
@@ -40,6 +55,8 @@ export async function listInvoicesForOrder(
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       amount: item.amount,
+      ...(item.catalogItemId != null && { catalogItemId: item.catalogItemId }),
+      ...(item.catalogItemId != null && { icon: iconMap[item.catalogItemId] ?? null }),
     })),
   }));
 }

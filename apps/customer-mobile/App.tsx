@@ -102,6 +102,14 @@ function serviceTypeDisplayLabel(serviceType: string): string {
   return (map[s] ?? String(serviceType)).replace(/_/g, ' ');
 }
 
+/** YYYY-MM-DD in local time (avoids UTC off-by-one when user selects e.g. 25 Feb). */
+function toLocalDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export default function App() {
   const [step, setStep] = useState<Step>('phone');
   const [initializing, setInitializing] = useState(true);
@@ -1864,7 +1872,7 @@ export default function App() {
                   onChange={(event, selectedDate) => {
                     if (Platform.OS === 'android') setShowDatePicker(false);
                     if (event.type === 'set' && selectedDate) {
-                      setBookingDate(selectedDate.toISOString().slice(0, 10));
+                      setBookingDate(toLocalDateKey(selectedDate));
                     }
                   }}
                 />
@@ -2547,25 +2555,36 @@ export default function App() {
                     const discountPaise = inv.discountPaise ?? 0;
                     const subtotal = inv.subtotal ?? inv.total;
                     const tax = inv.tax ?? 0;
-                    const openInvoice = async () => {
+                    const openInvoice = async (action: 'download' | 'share') => {
                       if (!token) return;
                       setInvoiceError(null);
                       setInvoiceLoadingId(inv.id);
                       try {
                         const base64 = await fetchInvoicePdfBase64(inv.id, token);
-                        const dir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+                        const dir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+                        if (!dir) {
+                          setInvoiceError('Cannot access storage.');
+                          return;
+                        }
                         const fileUri = `${dir}invoice-${inv.id}-${Date.now()}.pdf`;
                         await FileSystem.writeAsStringAsync(fileUri, base64, {
                           encoding: FileSystem.EncodingType.Base64,
                         });
                         const available = await Sharing.isAvailableAsync();
-                        if (available) {
+                        if (!available) {
+                          setInvoiceError('Sharing is not available on this device.');
+                          return;
+                        }
+                        if (action === 'share') {
                           await Sharing.shareAsync(fileUri, {
                             mimeType: 'application/pdf',
-                            dialogTitle: 'View or save invoice',
+                            dialogTitle: 'Share invoice',
                           });
                         } else {
-                          setInvoiceError('Sharing is not available on this device.');
+                          await Sharing.shareAsync(fileUri, {
+                            mimeType: 'application/pdf',
+                            dialogTitle: 'Save or view invoice',
+                          });
                         }
                       } catch (e) {
                         setInvoiceError((e as Error).message);
@@ -2578,15 +2597,23 @@ export default function App() {
                         <Text style={styles.invoiceTypeLabel}>{inv.type}</Text>
                         {items.length > 0 ? (
                           <>
-                            {items.map((item) => (
-                              <View key={item.id} style={styles.invoiceItemRow}>
-                                <Text style={styles.invoiceItemName} numberOfLines={2}>
-                                  {item.name}
-                                  {item.quantity !== 1 ? ` × ${item.quantity}` : ''}
-                                </Text>
-                                <Text style={styles.invoiceItemAmount}>₹{(item.amount / 100).toFixed(2)}</Text>
-                              </View>
-                            ))}
+                            {items.map((item) => {
+                              const iconUri = item.icon && (item.icon.startsWith('http') || item.icon.startsWith('/'))
+                                ? brandingLogoFullUrl(item.icon)
+                                : null;
+                              return (
+                                <View key={item.id} style={styles.invoiceItemRow}>
+                                  {iconUri ? (
+                                    <Image source={{ uri: iconUri }} style={styles.invoiceItemIcon} />
+                                  ) : null}
+                                  <Text style={[styles.invoiceItemName, !iconUri && styles.invoiceItemNameNoIcon]} numberOfLines={2}>
+                                    {item.name}
+                                    {item.quantity !== 1 ? ` × ${item.quantity}` : ''}
+                                  </Text>
+                                  <Text style={styles.invoiceItemAmount}>₹{(item.amount / 100).toFixed(2)}</Text>
+                                </View>
+                              );
+                            })}
                             <View style={styles.invoiceTotals}>
                               <View style={styles.invoiceTotalRow}>
                                 <Text style={styles.invoiceTotalLabel}>Subtotal</Text>
@@ -2616,7 +2643,7 @@ export default function App() {
                         <View style={styles.invoiceActions}>
                           <TouchableOpacity
                             style={[styles.invoiceCta, styles.invoiceCtaDownload, isLoading && styles.buttonDisabled]}
-                            onPress={openInvoice}
+                            onPress={() => openInvoice('download')}
                             disabled={isLoading}
                           >
                             {isLoading ? (
@@ -2627,7 +2654,7 @@ export default function App() {
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={[styles.invoiceCta, styles.invoiceCtaShare, isLoading && styles.buttonDisabled]}
-                            onPress={openInvoice}
+                            onPress={() => openInvoice('share')}
                             disabled={isLoading}
                           >
                             <Text style={[styles.invoiceCtaText, { color: colors.white }]}>Share</Text>
@@ -4492,11 +4519,17 @@ const styles = StyleSheet.create({
   invoiceItemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 6,
     paddingVertical: 4,
     borderBottomWidth: 1,
     borderBottomColor: colors.elevation2,
+  },
+  invoiceItemIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+    borderRadius: 4,
   },
   invoiceItemName: {
     flex: 1,
@@ -4504,6 +4537,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginRight: 12,
   },
+  invoiceItemNameNoIcon: {},
   invoiceItemAmount: {
     fontSize: 14,
     fontWeight: '600',

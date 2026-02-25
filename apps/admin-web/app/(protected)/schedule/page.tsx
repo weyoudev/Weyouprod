@@ -15,6 +15,7 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { getFriendlyErrorMessage } from '@/lib/api';
+import { isoToLocalDateKey, getTodayLocalDateKey } from '@/lib/format';
 import { useBranches } from '@/hooks/useBranches';
 import { getStoredUser } from '@/lib/auth';
 
@@ -163,8 +164,8 @@ export default function SchedulePage() {
     const from = new Date();
     const to = new Date();
     to.setFullYear(to.getFullYear() + 1);
-    const fromStr = from.toISOString().slice(0, 10);
-    const toStr = to.toISOString().slice(0, 10);
+    const fromStr = getTodayLocalDateKey();
+    const toStr = `${to.getFullYear()}-${String(to.getMonth() + 1).padStart(2, '0')}-${String(to.getDate()).padStart(2, '0')}`;
     setHolidaysLoading(true);
     api
       .get<Holiday[]>('/admin/holidays', { params: { from: fromStr, to: toStr, branchId: branchIdForApi } })
@@ -245,7 +246,7 @@ export default function SchedulePage() {
 
   const openEditHoliday = (h: Holiday) => {
     setEditingHoliday(h);
-    setEditDate(new Date(h.date).toISOString().slice(0, 10));
+    setEditDate(isoToLocalDateKey(h.date) ?? h.date.slice(0, 10));
     setEditLabel(h.label ?? '');
     setEditScopeCommon(h.branchId == null);
   };

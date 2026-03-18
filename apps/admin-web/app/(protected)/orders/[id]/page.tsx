@@ -100,6 +100,7 @@ export default function OrderDetailPage() {
   const [finalDiscountValue, setFinalDiscountValue] = useState(0);
   const [finalComments, setFinalComments] = useState('Thank for opting our services');
   const [paymentAmountRupees, setPaymentAmountRupees] = useState<number | ''>('');
+  const [paymentNote, setPaymentNote] = useState('');
   const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>('UPI');
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -524,11 +525,11 @@ export default function OrderDetailPage() {
   const recordPayment = () => {
     const amountPaise = paymentAmountRupees === '' ? 0 : Math.round(Number(paymentAmountRupees) * 100);
     if (amountPaise <= 0) {
-      toast.error('Enter amount to record');
+      toast.error('Amount comes from Final invoice and cannot be zero.');
       return;
     }
     updatePayment.mutate(
-      { provider: paymentProvider, status: 'CAPTURED', amountPaise },
+      { provider: paymentProvider, status: 'CAPTURED', amountPaise, note: paymentNote || undefined },
       { onSuccess: () => toast.success('Payment recorded'), onError: (e) => toast.error(e.message) }
     );
   };
@@ -1491,10 +1492,17 @@ export default function OrderDetailPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {summary.payment ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <PaymentStatusBadge status={summary.payment.status} />
-              <span className="font-medium">{formatMoney(summary.payment.amount)}</span>
-              <span className="text-muted-foreground">{summary.payment.provider.replace(/_/g, ' ')}</span>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <PaymentStatusBadge status={summary.payment.status} />
+                <span className="font-medium">{formatMoney(summary.payment.amount)}</span>
+                <span className="text-muted-foreground">{summary.payment.provider.replace(/_/g, ' ')}</span>
+              </div>
+              {summary.payment.note && (
+                <p className="text-xs text-muted-foreground">
+                  Note: {summary.payment.note}
+                </p>
+              )}
             </div>
           ) : (
             <p className="text-muted-foreground">No payment recorded.</p>
@@ -1511,8 +1519,8 @@ export default function OrderDetailPage() {
                     min={0}
                     step={0.01}
                     value={paymentAmountRupees}
-                    onChange={(e) => setPaymentAmountRupees(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="h-9 w-28 rounded-md border px-2 text-sm"
+                    readOnly
+                    className="h-9 w-28 rounded-md border px-2 text-sm bg-muted/40 text-muted-foreground cursor-not-allowed"
                     placeholder="0"
                   />
                 </div>
@@ -1528,6 +1536,16 @@ export default function OrderDetailPage() {
                     <option value="CARD">CARD</option>
                     <option value="RAZORPAY">Razorpay</option>
                   </select>
+                </div>
+                <div className="flex-1 min-w-[160px] space-y-1">
+                  <label className="text-xs text-muted-foreground block">Transaction details / note</label>
+                  <input
+                    type="text"
+                    value={paymentNote}
+                    onChange={(e) => setPaymentNote(e.target.value)}
+                    className="h-9 w-full rounded-md border px-2 text-sm"
+                    placeholder="UPI ref, last 4 digits, etc."
+                  />
                 </div>
                 <Button
                   size="sm"

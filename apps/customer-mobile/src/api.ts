@@ -54,6 +54,12 @@ export interface PublicBrandingResponse {
   privacyPolicy: string | null;
   /** Welcome screen background image (shown at 50% opacity). */
   welcomeBackgroundUrl: string | null;
+  /** Optional: branch or billing address (shown on invoices). */
+  address?: string | null;
+  /** Optional: GSTIN printed on invoices. */
+  gstNumber?: string | null;
+  /** Optional: PAN number printed on invoices. */
+  panNumber?: string | null;
 }
 
 export async function getPublicBranding(): Promise<PublicBrandingResponse> {
@@ -423,7 +429,10 @@ export async function checkServiceability(pincode: string): Promise<Serviceabili
   const res = await fetchWithTimeout(`${base}/serviceability?pincode=${encodeURIComponent(pincode)}`);
   const data = (await res.json()) as ServiceabilityResult & { message?: string[]; statusCode?: number };
   if (!res.ok) {
-    const msg = Array.isArray(data.message) ? data.message.join(', ') : (data.message as string) || 'Request failed';
+    const msg =
+      Array.isArray(data.message) ? data.message.join(', ')
+        : typeof (data as { message?: unknown }).message === 'string' ? ((data as { message: string }).message)
+          : 'Request failed';
     return { pincode, serviceable: false, message: msg };
   }
   return {
@@ -608,10 +617,16 @@ export interface OrderInvoiceItem {
   amount: number;
   catalogItemId?: string | null;
   icon?: string | null;
+  /** Optional catalog-matrix info (when invoice line is tied to a segment/service category). */
+  segmentCategoryId?: string | null;
+  segmentLabel?: string | null;
+  serviceCategoryId?: string | null;
+  serviceLabel?: string | null;
 }
 
 export interface OrderInvoice {
   id: string;
+  code?: string | null;
   type: string;
   status: string;
   subtotal?: number;
@@ -620,6 +635,11 @@ export interface OrderInvoice {
   discountPaise?: number;
   issuedAt: string | null;
   pdfUrl: string;
+  branchAddress?: string | null;
+  branchEmail?: string | null;
+  branchPhone?: string | null;
+  gstNumber?: string | null;
+  panNumber?: string | null;
   items?: OrderInvoiceItem[];
 }
 

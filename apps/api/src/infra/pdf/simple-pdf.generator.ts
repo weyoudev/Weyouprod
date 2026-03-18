@@ -6,110 +6,176 @@ function pdfEscape(s: string): string {
 }
 
 /**
- * Builds a minimal PDF (PDF 1.1) with invoice content as text using proper BT/ET and Tj operators
- * so viewers render the text (raw text in stream would appear blank).
+ * Builds a small self-contained PDF (PDF 1.1) with a simple invoice layout.
+ * We keep it dependency-free (no headless chrome / pdfkit) and rely on basic
+ * PDF text operators + a few line drawing ops for a structured look.
  */
 function buildMinimalPdf(aggregate: InvoicePdfAggregate): Buffer {
-  const lines: string[] = [];
   const b = aggregate.branding;
-  lines.push('INVOICE');
-  lines.push(`Type: ${aggregate.type}`);
-  lines.push(`Invoice #: ${aggregate.invoiceId}`);
-  if (aggregate.type === 'SUBSCRIPTION') {
-    lines.push('Subscription purchase');
-  } else {
-    lines.push(`Order ID: ${aggregate.orderId ?? 'N/A'}`);
+  const money = (paise: number) => (paise / 100).toFixed(2);
+  const issued = aggregate.issuedAt.toISOString().slice(0, 19).replace('T', ' ');
+
+  const fontNormal = 10;
+  const fontSmall = 9;
+  const fontTitle = 16;
+  const fontH = 12;
+  const marginX = 44;
+  const pageW = 612;
+  const pageH = 792;
+  const contentW = pageW - marginX * 2;
+
+  const contentParts: string[] = [];
+  const setFont = (size: number) => contentParts.push('BT', `/F1 ${size} Tf`);
+  const textAt = (x: number, y: number, s: string) => {
+    contentParts.push(`1 0 0 1 ${x} ${y} Tm`);
+    contentParts.push(`(${pdfEscape(s)}) Tj`);
+  };
+  const endText = () => contentParts.push('ET');
+  const line = (x1: number, y1: number, x2: number, y2: number) => {
+    contentParts.push('0 0 0 RG', '1 w', `${x1} ${y1} m`, `${x2} ${y2} l`, 'S');
+  };
+
+  // Header
+  setFont(fontTitle);
+  textAt(marginX, pageH - 64, 'INVOICE');
+  endText();
+
+  setFont(fontNormal);
+  textAt(marginX, pageH - 84, b.businessName || 'Business');
+  endText();
+
+  setFont(fontSmall);
+  if (b.address) {
+    textAt(marginX, pageH - 98, b.address);
   }
-  lines.push(`Issued: ${aggregate.issuedAt.toISOString()}`);
-  lines.push('');
-  lines.push('Business:');
-  lines.push(b.businessName);
-  lines.push(b.address);
-  lines.push(b.phone);
-  if (b.gstNumber) lines.push(`GST: ${b.gstNumber}`);
-  if (b.panNumber) lines.push(`PAN: ${b.panNumber}`);
-  if (b.footerNote) lines.push(`Note: ${b.footerNote}`);
-  lines.push('');
-  if (aggregate.customerName != null || aggregate.customerPhone != null) {
-    lines.push('Customer:');
-    if (aggregate.customerName) lines.push(aggregate.customerName);
-    if (aggregate.customerPhone) lines.push(aggregate.customerPhone);
-    lines.push('');
+  const contact = [b.email, b.phone].filter(Boolean).join(' · ');
+  if (contact) textAt(marginX, pageH - 110, contact);
+  endText();
+
+  // Top meta (right aligned-ish by placing near right edge)
+  const rightX = marginX + contentW * 0.62;
+  setFont(fontSmall);
+  textAt(rightX, pageH - 86, `Type: ${aggregate.type}`);
+  textAt(rightX, pageH - 98, `Invoice #: ${aggregate.invoiceId}`);
+  if (aggregate.type !== 'SUBSCRIPTION') textAt(rightX, pageH - 110, `Order ID: ${aggregate.orderId ?? '—'}`);
+  textAt(rightX, pageH - 122, `Issued: ${issued}`);
+  endText();
+
+  line(marginX, pageH - 132, pageW - marginX, pageH - 132);
+
+  // Customer block
+  let y = pageH - 156;
+  setFont(fontH);
+  textAt(marginX, y, 'Customer');
+  endText();
+  y -= 16;
+  setFont(fontNormal);
+  if (aggregate.customerName) {
+    textAt(marginX, y, aggregate.customerName);
+    y -= 14;
   }
-  lines.push('Items:');
+  if (aggregate.customerPhone) {
+    textAt(marginX, y, aggregate.customerPhone);
+    y -= 14;
+  }
+  if (!aggregate.customerName && !aggregate.customerPhone) {
+    textAt(marginX, y, '—');
+    y -= 14;
+  }
+  endText();
+
+  // Tax IDs
+  setFont(fontSmall);
+  const taxY = pageH - 156;
+  if (b.panNumber) textAt(rightX, taxY, `PAN: ${b.panNumber}`);
+  if (b.gstNumber) textAt(rightX, taxY - 12, `GST: ${b.gstNumber}`);
+  endText();
+
+  y -= 8;
+  line(marginX, y, pageW - marginX, y);
+  y -= 18;
+
+  // Items table header
+  const colName = marginX;
+  const colQty = marginX + contentW * 0.62;
+  const colUnit = marginX + contentW * 0.75;
+  const colAmt = marginX + contentW * 0.88;
+
+  setFont(fontH);
+  textAt(marginX, y, 'Items');
+  endText();
+  y -= 16;
+
+  setFont(fontSmall);
+  textAt(colName, y, 'Name');
+  textAt(colQty, y, 'Qty');
+  textAt(colUnit, y, 'Unit (₹)');
+  textAt(colAmt, y, 'Amount (₹)');
+  endText();
+  y -= 8;
+  line(marginX, y, pageW - marginX, y);
+  y -= 14;
+
+  // Rows (simple truncation)
+  setFont(fontNormal);
+  const maxNameLen = 42;
   for (const item of aggregate.items) {
-    lines.push(`  ${item.name} x ${item.quantity} @ ${(item.unitPrice / 100).toFixed(2)} = ${(item.amount / 100).toFixed(2)}`);
+    const name = item.name.length > maxNameLen ? item.name.slice(0, maxNameLen - 1) + '…' : item.name;
+    textAt(colName, y, name);
+    textAt(colQty, y, String(item.quantity));
+    textAt(colUnit, y, money(item.unitPrice));
+    textAt(colAmt, y, money(item.amount));
+    y -= 14;
+    if (y < 140) break; // keep within one page (safe)
+  }
+  endText();
+
+  // Totals
+  y -= 4;
+  line(marginX, y, pageW - marginX, y);
+  y -= 18;
+
+  setFont(fontH);
+  textAt(colAmt - 120, y, `Subtotal: ₹${money(aggregate.subtotal)}`);
+  y -= 16;
+  if (aggregate.tax > 0) {
+    textAt(colAmt - 120, y, `Tax: ₹${money(aggregate.tax)}`);
+    y -= 16;
   }
   if (aggregate.discountPaise != null && aggregate.discountPaise > 0) {
-    lines.push(`  Discount: -${(aggregate.discountPaise / 100).toFixed(2)}`);
+    textAt(colAmt - 120, y, `Discount: -₹${money(aggregate.discountPaise)}`);
+    y -= 16;
   }
-  lines.push('');
-  lines.push(`Subtotal: ${(aggregate.subtotal / 100).toFixed(2)}`);
-  lines.push(`Tax: ${(aggregate.tax / 100).toFixed(2)}`);
-  lines.push(`Total: ${(aggregate.total / 100).toFixed(2)}`);
+  textAt(colAmt - 120, y, `Total: ₹${money(aggregate.total)}`);
+  endText();
 
+  // Terms (short)
+  const terms = b.termsAndConditions?.trim() ?? '';
+  if (terms) {
+    y -= 22;
+    setFont(fontH);
+    textAt(marginX, y, 'Terms and Conditions');
+    endText();
+    y -= 16;
+    setFont(fontSmall);
+    const termsLines = terms.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 6);
+    for (const t of termsLines) {
+      textAt(marginX, y, t.length > 100 ? t.slice(0, 99) + '…' : t);
+      y -= 12;
+      if (y < 80) break;
+    }
+    endText();
+  }
+
+  // Footer
   const f = aggregate.footer;
-  const footerLine1 = [f.address, f.email, f.phone].filter(Boolean).join(' | ');
+  const footerLine1 = [f.address, f.email, f.phone].filter(Boolean).join(' · ');
   const footerLine2 = "It's a computer generated invoice, Signature not required.";
-  const LINE_WIDTH = 72;
-  const centerPad = (s: string) => {
-    const len = s.length;
-    if (len >= LINE_WIDTH) return s;
-    const left = Math.floor((LINE_WIDTH - len) / 2);
-    return ' '.repeat(left) + s;
-  };
-  lines.push('');
-  lines.push(centerPad(footerLine1));
-  lines.push(centerPad(footerLine2));
+  setFont(fontSmall);
+  textAt(marginX, 56, footerLine1 || '');
+  textAt(marginX, 42, footerLine2);
+  endText();
 
-  if (b.upiId) {
-    lines.push('');
-    lines.push(`UPI ID: ${b.upiId}`);
-    if (b.upiPayeeName) lines.push(`Pay to: ${b.upiPayeeName}`);
-  }
-  if (b.upiQrUrl) {
-    lines.push('QR code available at: ' + b.upiQrUrl);
-  }
-  if (aggregate.subscriptionSummary) {
-    lines.push('');
-    lines.push('Subscription (usage):');
-    lines.push(`  Used kg: ${aggregate.subscriptionSummary.usedKg}, Items: ${aggregate.subscriptionSummary.usedItemsCount}`);
-    lines.push(`  Remaining pickups: ${aggregate.subscriptionSummary.remainingPickups}`);
-    lines.push(`  Expiry: ${aggregate.subscriptionSummary.expiryDate.toISOString()}`);
-  }
-  if (aggregate.subscriptionPurchaseSummary) {
-    lines.push('');
-    lines.push('Subscription plan:');
-    lines.push(`  Valid till: ${aggregate.subscriptionPurchaseSummary.validTill.toISOString().slice(0, 10)}`);
-    lines.push(`  No. of pickups: ${aggregate.subscriptionPurchaseSummary.maxPickups}`);
-    const kg = aggregate.subscriptionPurchaseSummary.kgLimit;
-    const items = aggregate.subscriptionPurchaseSummary.itemsLimit;
-    if (kg != null || items != null) {
-      lines.push(`  Weight/items limit: ${kg != null ? kg + ' kg' : 'N/A'} / ${items != null ? items + ' items' : 'N/A'}`);
-    }
-  }
-
-  if (b.termsAndConditions && b.termsAndConditions.trim()) {
-    lines.push('');
-    lines.push('Terms and Conditions:');
-    const termsLines = b.termsAndConditions.trim().split(/\r?\n/);
-    for (const line of termsLines) {
-      const trimmed = line.trim();
-      if (trimmed) lines.push('  ' + trimmed);
-    }
-  }
-
-  const fontSize = 11;
-  const lineHeight = 14;
-  const marginX = 50;
-  let y = 750;
-  const contentParts: string[] = ['BT', '/F1 ' + fontSize + ' Tf'];
-  for (const line of lines) {
-    contentParts.push('1 0 0 1 ' + marginX + ' ' + y + ' Tm');
-    contentParts.push('(' + pdfEscape(line) + ') Tj');
-    y -= lineHeight;
-  }
-  contentParts.push('ET');
   const streamBody = contentParts.join('\n');
   const header = '%PDF-1.1\n';
   const obj1 = '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n';

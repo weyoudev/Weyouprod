@@ -19,6 +19,8 @@ import type {
   FeedbackRepo,
   InvoicesRepo,
   LaundryItemsRepo,
+  SegmentCategoryRepo,
+  ServiceCategoryRepo,
 } from '../../application/ports';
 import {
   ORDERS_REPO,
@@ -33,6 +35,8 @@ import {
   FEEDBACK_REPO,
   INVOICES_REPO,
   LAUNDRY_ITEMS_REPO,
+  SEGMENT_CATEGORY_REPO,
+  SERVICE_CATEGORY_REPO,
 } from '../../infra/infra.module';
 import type { AuthUser } from '../common/roles.guard';
 import { AppError } from '../../application/errors';
@@ -52,6 +56,8 @@ export class OrdersService {
     @Inject(FEEDBACK_REPO) private readonly feedbackRepo: FeedbackRepo,
     @Inject(INVOICES_REPO) private readonly invoicesRepo: InvoicesRepo,
     @Inject(LAUNDRY_ITEMS_REPO) private readonly laundryItemsRepo: LaundryItemsRepo,
+    @Inject(SEGMENT_CATEGORY_REPO) private readonly segmentCategoryRepo: SegmentCategoryRepo,
+    @Inject(SERVICE_CATEGORY_REPO) private readonly serviceCategoryRepo: ServiceCategoryRepo,
   ) {}
 
   async listInvoicesForOrder(orderId: string, user: AuthUser) {
@@ -59,6 +65,8 @@ export class OrdersService {
       ordersRepo: this.ordersRepo,
       invoicesRepo: this.invoicesRepo,
       laundryItemsRepo: this.laundryItemsRepo,
+      segmentCategoryRepo: this.segmentCategoryRepo,
+      serviceCategoryRepo: this.serviceCategoryRepo,
     });
   }
 

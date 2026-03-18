@@ -16,8 +16,13 @@ export default function OrderDetailError({
   useEffect(() => {
     console.error('Order detail error:', error);
 
-    // Auto-retry once for the common transient React #310 hydration error
-    if (!hasRetriedRef.current && (error?.message || '').includes('Minified React error #310')) {
+    const msg = error?.message || '';
+    // Auto-retry once for common transient React hydration/hook ordering errors
+    if (
+      !hasRetriedRef.current &&
+      (msg.includes('Minified React error #310') ||
+        msg.includes('Rendered more hooks than during the previous render'))
+    ) {
       hasRetriedRef.current = true;
       reset();
     }

@@ -1,5 +1,7 @@
 generator client {
   provider = "prisma-client-js"
+  // Keep Prisma Client in-repo so TS path aliases resolve correctly.
+  output   = "../generated/prisma-client"
 }
 
 datasource db {

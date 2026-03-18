@@ -25,6 +25,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as Print from 'expo-print';
 import * as DateTimePickerModule from '@react-native-community/datetimepicker';
 const DateTimePicker = DateTimePickerModule?.default ?? DateTimePickerModule;
 import { checkApiConnection } from './src/config/api';
@@ -72,6 +73,15 @@ type Step = 'phone' | 'otp' | 'profile' | 'done';
 type HomeScreen = 'home' | 'subscriptions' | 'subscriptionDetail' | 'addresses' | 'addAddress' | 'areaRequestSent' | 'bookPickup' | 'myOrders' | 'orderDetail' | 'profile';
 type OrderFilter = 'all' | 'walk_in' | 'individual' | 'subscription';
 type BookingStep = 'services' | 'address' | 'date' | 'time' | 'confirm';
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 function orderStatusLabel(status: string): string {
   const s = (status || '').toUpperCase().replace(/-/g, '_');
@@ -424,6 +434,254 @@ export default function App() {
     }, 5000);
     return () => clearInterval(id);
   }, [step, homeScreen, carouselImageUrls.length]);
+
+  const fetchAddresses = useCallback(async () => {
+    if (!token) return;
+    setAddressesLoading(true);
+    try {
+      const data = await listAddresses(token);
+      const filtered = data.filter((a) => {
+        const normalized = (a.label ?? '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+        return normalized !== 'walkin';
+      });
+      setAddresses(filtered);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load addresses');
+    } finally {
+      setAddressesLoading(false);
+    }
+  }, [token]);
+
+  const imageDataUriCacheRef = useRef<Map<string, string>>(new Map());
+  const imageToDataUri = useCallback(async (url: string): Promise<string | null> => {
+    const u = url?.trim();
+    if (!u) return null;
+    const cache = imageDataUriCacheRef.current;
+    const cached = cache.get(u);
+    if (cached) return cached;
+    try {
+      const res = await fetch(u);
+      if (!res.ok) return null;
+      const contentType = res.headers.get('content-type') || 'image/png';
+      const buf = await res.arrayBuffer();
+      const base64Module = await import('base64-arraybuffer').catch(() => null);
+      const encodeBase64 = base64Module?.encode;
+      if (typeof encodeBase64 !== 'function') return null;
+      const base64 = encodeBase64(buf);
+      const dataUri = `data:${contentType};base64,${base64}`;
+      cache.set(u, dataUri);
+      return dataUri;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const buildFinalInvoiceHtml = useCallback(async (inv: OrderInvoice): Promise<string> => {
+    const b = welcomeBranding;
+    const businessName = b?.businessName?.trim() || 'WeYou';
+    const logoUrl = b?.logoUrl ? (brandingLogoFullUrl(b.logoUrl) ?? null) : null;
+    const logoDataUri = logoUrl ? await imageToDataUri(logoUrl) : null;
+    const order = orderDetail;
+    const issuedAt = inv.issuedAt ? new Date(inv.issuedAt) : null;
+    const items = inv.items ?? [];
+
+    const iconDataUris: Record<string, string | null> = {};
+    await Promise.all(
+      items.map(async (it) => {
+        const raw = it.icon && (it.icon.startsWith('http') || it.icon.startsWith('/')) ? brandingLogoFullUrl(it.icon) : null;
+        if (!raw) return;
+        iconDataUris[it.id] = await imageToDataUri(raw);
+      })
+    );
+
+    const money = (paise: number) => `₹${(paise / 100).toFixed(2)}`;
+    const subtotal = inv.subtotal ?? inv.total;
+    const tax = inv.tax ?? 0;
+    const discountPaise = inv.discountPaise ?? 0;
+
+    const customerName = name?.trim() ? escapeHtml(name.trim()) : '—';
+    const customerPhoneLine = userPhone ? escapeHtml(userPhone) : '—';
+    const addressLine = order?.addressLine ? escapeHtml(order.addressLine) : '';
+    const pincodeLine = order?.pincode ? escapeHtml(order.pincode) : '';
+    const pickupLine = order?.pickupDate ? escapeHtml(order.pickupDate) : '';
+    const timeWindowLine = order?.timeWindow ? escapeHtml(order.timeWindow) : '';
+    const servicesLine = order?.serviceTypes?.length
+      ? escapeHtml(order.serviceTypes.map(serviceTypeDisplayLabel).join(', '))
+      : (order?.serviceType ? escapeHtml(serviceTypeDisplayLabel(order.serviceType)) : '—');
+
+    const issuedStr = issuedAt
+      ? issuedAt.toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : '—';
+
+    const branchAddress = inv.branchAddress?.trim()
+      || b?.address?.trim()
+      || '';
+    const gstLine = (inv.gstNumber ?? b?.gstNumber)?.trim()
+      ? `GSTIN: ${(inv.gstNumber ?? b?.gstNumber)!.trim()}`
+      : '';
+    const panLine = (inv.panNumber ?? b?.panNumber)?.trim()
+      ? `PAN: ${(inv.panNumber ?? b?.panNumber)!.trim()}`
+      : '';
+
+    return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      * { box-sizing: border-box; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 0; padding: 24px; color: #111827; }
+      .card { border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px; }
+      .header { display: flex; gap: 14px; align-items: flex-start; padding-bottom: 14px; border-bottom: 1px solid #e5e7eb; }
+      .logo { width: 72px; height: 72px; border-radius: 12px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+      .logo img { width: 100%; height: 100%; object-fit: contain; object-position: left top; }
+      .title { font-size: 18px; font-weight: 800; margin: 0; }
+      .muted { color: #6b7280; font-size: 12px; margin: 2px 0 0; }
+      .meta { margin-left: auto; text-align: right; }
+      .meta .k { font-size: 11px; color: #6b7280; margin: 0; }
+      .meta .v { font-size: 12px; font-weight: 600; margin: 2px 0 8px; }
+      .grid { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+      .box { flex: 1 1 240px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; }
+      .box h3 { margin: 0 0 8px; font-size: 12px; color: #111827; }
+      .box p { margin: 0; font-size: 12px; color: #374151; line-height: 1.4; }
+      table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+      th, td { padding: 10px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+      th { text-align: left; font-size: 11px; color: #6b7280; }
+      td { font-size: 12px; color: #111827; }
+      .right { text-align: right; white-space: nowrap; }
+      .item { display: flex; gap: 10px; align-items: flex-start; }
+      .icon { width: 28px; height: 28px; border-radius: 8px; background: #f3f4f6; overflow: hidden; flex: none; }
+      .icon img { width: 100%; height: 100%; object-fit: cover; }
+      .name { font-weight: 700; margin: 0; }
+      .sub { font-size: 11px; color: #6b7280; margin: 2px 0 0; }
+      .totals { margin-top: 14px; display: flex; justify-content: flex-end; }
+      .totals .row { display: flex; justify-content: space-between; gap: 24px; padding: 4px 0; font-size: 12px; }
+      .totals .label { color: #6b7280; }
+      .totals .value { font-weight: 700; }
+      .grand { font-size: 16px; font-weight: 900; padding-top: 8px; border-top: 1px solid #e5e7eb; margin-top: 6px; }
+      .terms { margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e5e7eb; }
+      .terms h4 { margin: 0 0 6px; font-size: 12px; }
+      .terms pre { margin: 0; white-space: pre-wrap; font-family: inherit; font-size: 11px; color: #4b5563; }
+      .footer { margin-top: 14px; text-align: center; font-size: 11px; color: #6b7280; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="header">
+        <div class="logo">
+          ${
+            logoDataUri
+              ? `<img src="${logoDataUri}" alt="Logo" />`
+              : `<span style="font-size:12px;color:#6b7280;">Logo</span>`
+          }
+        </div>
+        <div style="min-width:0;">
+          <p class="title">${escapeHtml(businessName)}</p>
+          <p class="muted">Final Invoice</p>
+        </div>
+        <div class="meta">
+          <p class="k">Issued</p>
+          <p class="v">${escapeHtml(issuedStr)}</p>
+          <p class="k">Order</p>
+          <p class="v">${escapeHtml(order?.id ?? '—')}</p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="box">
+          <h3>Customer</h3>
+          <p>${customerName}</p>
+          <p class="muted" style="margin-top:4px;">${customerPhoneLine}</p>
+        </div>
+        <div class="box">
+          <h3>Pickup address</h3>
+          <p>${addressLine}${addressLine && pincodeLine ? ', ' : ''}${pincodeLine}</p>
+          <p style="margin-top:6px;"><span class="muted">Pickup:</span> ${pickupLine} ${timeWindowLine}</p>
+          <p style="margin-top:2px;"><span class="muted">Services:</span> ${servicesLine}</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:55%;">Item</th>
+            <th class="right">Qty</th>
+            <th class="right">Unit</th>
+            <th class="right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${
+            items.length
+              ? items
+                  .map((it) => {
+                    const meta = [it.segmentLabel, it.serviceLabel].filter(Boolean).join(' · ');
+                    const icon = iconDataUris[it.id] ?? null;
+                    return `<tr>
+                      <td>
+                        <div class="item">
+                          <div class="icon">${
+                            icon ? `<img src="${icon}" alt="" />` : ''
+                          }</div>
+                          <div style="min-width:0;">
+                            <p class="name">${escapeHtml(it.name)}</p>
+                            ${meta ? `<p class="sub">${escapeHtml(meta)}</p>` : ''}
+                          </div>
+                        </div>
+                      </td>
+                      <td class="right">${escapeHtml(String(it.quantity))}</td>
+                      <td class="right">${escapeHtml(money(it.unitPrice))}</td>
+                      <td class="right">${escapeHtml(money(it.amount))}</td>
+                    </tr>`;
+                  })
+                  .join('\n')
+              : `<tr><td colspan="4" class="muted">No items</td></tr>`
+          }
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <div style="width: 280px;">
+          <div class="row"><span class="label">Subtotal</span><span class="value">${escapeHtml(money(subtotal))}</span></div>
+          ${tax > 0 ? `<div class="row"><span class="label">Tax</span><span class="value">${escapeHtml(money(tax))}</span></div>` : ''}
+          ${discountPaise > 0 ? `<div class="row"><span class="label">Discount</span><span class="value">- ${escapeHtml(money(discountPaise))}</span></div>` : ''}
+          <div class="row grand"><span>Total</span><span>${escapeHtml(money(inv.total))}</span></div>
+        </div>
+      </div>
+
+      ${
+        branchAddress || gstLine || panLine
+          ? `<div class="box" style="margin-top: 10px;">
+               <h3>Branch &amp; tax details</h3>
+               ${
+                 branchAddress
+                   ? `<p>${escapeHtml(branchAddress)}</p>`
+                   : ''
+               }
+               ${
+                 gstLine
+                   ? `<p>${escapeHtml(gstLine)}</p>`
+                   : ''
+               }
+               ${
+                 panLine
+                   ? `<p>${escapeHtml(panLine)}</p>`
+                   : ''
+               }
+             </div>`
+          : ''
+      }
+
+      ${
+        b?.termsAndConditions?.trim()
+          ? `<div class="terms"><h4>Terms and Conditions</h4><pre>${escapeHtml(b.termsAndConditions.trim())}</pre></div>`
+          : ''
+      }
+      <div class="footer">It's a computer generated invoice, Signature not required.</div>
+    </div>
+  </body>
+</html>`;
+  }, [brandingLogoFullUrl, imageToDataUri, orderDetail, userPhone, welcomeBranding]);
 
   useEffect(() => {
     if (step === 'done' && homeScreen === 'addresses' && token) {
@@ -820,19 +1078,6 @@ export default function App() {
       setLoading(false);
     }
   };
-
-  const fetchAddresses = useCallback(async () => {
-    if (!token) return;
-    setAddressesLoading(true);
-    try {
-      const data = await listAddresses(token);
-      setAddresses(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load addresses');
-    } finally {
-      setAddressesLoading(false);
-    }
-  }, [token]);
 
   const toggleService = (id: ServiceTypeId) => {
     setSelectedServiceIds((prev) =>
@@ -2565,6 +2810,22 @@ export default function App() {
                       setInvoiceError(null);
                       setInvoiceLoadingId(inv.id);
                       try {
+                        // FINAL invoice download should be a well-formatted PDF (logo, icons, tables).
+                        // Use native print-to-PDF with HTML, so the result looks like the admin invoice view.
+                        if (action === 'download' && inv.type === 'FINAL') {
+                          const html = await buildFinalInvoiceHtml(inv);
+                          const printed = await Print.printToFileAsync({ html, base64: false });
+                          const available = await Sharing.isAvailableAsync();
+                          if (!available) {
+                            setInvoiceError('Sharing is not available on this device.');
+                            return;
+                          }
+                          await Sharing.shareAsync(printed.uri, {
+                            mimeType: 'application/pdf',
+                            dialogTitle: 'Save or view Final invoice',
+                          });
+                          return;
+                        }
                         const base64 = await fetchInvoicePdfBase64(inv.id, token);
                         const dir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
                         if (!dir) {
@@ -2597,24 +2858,58 @@ export default function App() {
                         setInvoiceLoadingId(null);
                       }
                     };
+                    const issuedLabel = inv.issuedAt
+                      ? new Date(inv.issuedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      : null;
                     return (
                       <View key={inv.id} style={[styles.addressCard, styles.invoiceRow]}>
-                        <Text style={styles.invoiceTypeLabel}>{inv.type}</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, alignItems: 'center' }}>
+                          <View style={{ flexShrink: 1, paddingRight: 8 }}>
+                            <Text style={styles.invoiceTypeLabel}>
+                              {inv.type === 'ACKNOWLEDGEMENT' ? 'Acknowledgement invoice' : inv.type === 'FINAL' ? 'Final invoice' : inv.type}
+                            </Text>
+                            {inv.code ? (
+                              <Text style={[styles.muted, { marginTop: 2 }]}>
+                                Invoice no: {inv.code}
+                              </Text>
+                            ) : null}
+                          </View>
+                          {issuedLabel ? (
+                            <Text style={[styles.muted, { textAlign: 'right', fontSize: 12 }]}>
+                              Issued: {issuedLabel}
+                            </Text>
+                          ) : null}
+                        </View>
                         {items.length > 0 ? (
                           <>
                             {items.map((item) => {
                               const iconUri = item.icon && (item.icon.startsWith('http') || item.icon.startsWith('/'))
                                 ? brandingLogoFullUrl(item.icon)
                                 : null;
+                              const metaParts = [
+                                item.segmentLabel?.trim() || null,
+                                item.serviceLabel?.trim() || null,
+                              ].filter(Boolean) as string[];
+                              const meta = metaParts.length ? metaParts.join(' · ') : null;
                               return (
                                 <View key={item.id} style={styles.invoiceItemRow}>
                                   {iconUri ? (
                                     <Image source={{ uri: iconUri }} style={styles.invoiceItemIcon} />
                                   ) : null}
-                                  <Text style={[styles.invoiceItemName, !iconUri && styles.invoiceItemNameNoIcon]} numberOfLines={2}>
-                                    {item.name}
-                                    {item.quantity !== 1 ? ` × ${item.quantity}` : ''}
-                                  </Text>
+                                  <View style={{ flex: 1 }}>
+                                    <Text
+                                      style={[styles.invoiceItemName, !iconUri && styles.invoiceItemNameNoIcon]}
+                                      numberOfLines={2}
+                                    >
+                                      {item.name}
+                                      {item.quantity !== 1 ? ` × ${item.quantity}` : ''}
+                                    </Text>
+                                    {meta ? (
+                                      <Text style={styles.muted} numberOfLines={1}>
+                                        {meta}
+                                      </Text>
+                                    ) : null}
+                                  </View>
                                   <Text style={styles.invoiceItemAmount}>₹{(item.amount / 100).toFixed(2)}</Text>
                                 </View>
                               );
@@ -2645,6 +2940,21 @@ export default function App() {
                         ) : (
                           <Text style={styles.muted}>Total: ₹{(inv.total / 100).toFixed(2)}</Text>
                         )}
+                        {inv.type === 'FINAL' ? (
+                          <View style={styles.invoiceActions}>
+                            <TouchableOpacity
+                              style={[styles.invoiceCta, styles.invoiceCtaDownload, isLoading && styles.buttonDisabled]}
+                              onPress={() => openInvoice('download')}
+                              disabled={isLoading}
+                            >
+                              {isLoading ? (
+                                <ActivityIndicator size="small" color={colors.primary} />
+                              ) : (
+                                <Text style={styles.invoiceCtaText}>Download</Text>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        ) : null}
                       </View>
                     );
                   })

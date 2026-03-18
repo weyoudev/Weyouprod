@@ -3,6 +3,11 @@ import type { AddressesRepo, AddressListRecord, UpdateAddressPatch } from '../..
 import { ADDRESSES_REPO } from '../../infra/infra.module';
 import type { AuthUser } from '../common/roles.guard';
 
+function isWalkinLabel(label: string | null | undefined): boolean {
+  const normalized = (label ?? '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+  return normalized === 'walkin';
+}
+
 @Injectable()
 export class AddressesService {
   constructor(
@@ -11,7 +16,9 @@ export class AddressesService {
   ) {}
 
   async listForCustomer(user: AuthUser): Promise<AddressListRecord[]> {
-    return this.addressesRepo.listByUserId(user.id);
+    const list = await this.addressesRepo.listByUserId(user.id);
+    // Walk-in addresses are system-created for store orders and should never be shown in the customer app.
+    return list.filter((a) => !isWalkinLabel(a.label));
   }
 
   async createForCustomer(
@@ -27,6 +34,10 @@ export class AddressesService {
       city?: string | null;
     },
   ) {
+    if (isWalkinLabel(input.label)) {
+      // Prevent creating a system-reserved address from customer flows.
+      throw new NotFoundException('Invalid address label');
+    }
     return this.addressesRepo.create(user.id, {
       label: input.label,
       addressLine: input.addressLine,
@@ -46,6 +57,9 @@ export class AddressesService {
   ): Promise<AddressListRecord> {
     const existing = await this.addressesRepo.getByIdForUser(id, user.id);
     if (!existing) throw new NotFoundException('Address not found');
+    if (patch.label != null && isWalkinLabel(patch.label)) {
+      throw new NotFoundException('Invalid address label');
+    }
     return this.addressesRepo.update(id, user.id, patch);
   }
 

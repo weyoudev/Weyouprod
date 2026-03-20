@@ -1,34 +1,33 @@
-# Build stage: from monorepo root context
+# ─── Stage 1: Build ───────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Copy package files first for better layer caching
 COPY package.json package-lock.json* ./
-COPY packages ./packages
-COPY apps/admin-web ./apps/admin-web
 
-# Install all dependencies (skip optional native binaries for linux)
-RUN npm ci --ignore-scripts
+# Install dependencies (skip optional win32 native binaries)
+RUN npm ci --ignore-scripts --omit=optional
 
-# Build admin-web (Next.js standalone output)
-RUN npm run build:admin
+# Copy the rest of the app source
+COPY . .
 
-# Production stage
+# Build Next.js (standalone output is configured in next.config.js)
+RUN npx next build
+
+# ─── Stage 2: Production runner ───────────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
-# Required: bind to all interfaces inside the container
 ENV HOSTNAME=0.0.0.0
 
-# Copy standalone output (preserves apps/admin-web/server.js path structure)
-COPY --from=builder /app/apps/admin-web/.next/standalone ./
-# Copy static assets into the expected location
-COPY --from=builder /app/apps/admin-web/.next/static ./apps/admin-web/.next/static
+# Copy the standalone server bundle
+COPY --from=builder /app/.next/standalone ./
+# Copy static assets into the standalone's expected location
+COPY --from=builder /app/.next/static ./.next/static
 # Copy public folder
-COPY --from=builder /app/apps/admin-web/public ./apps/admin-web/public
-
-WORKDIR /app/apps/admin-web
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 

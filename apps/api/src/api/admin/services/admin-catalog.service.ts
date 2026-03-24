@@ -16,7 +16,6 @@ import type {
   ServiceCategoryRepo,
   SegmentCategoryRepo,
   ItemSegmentServicePriceRepo,
-  StorageAdapter,
 } from '../../../application/ports';
 import {
   LAUNDRY_ITEM_BRANCH_REPO,
@@ -25,23 +24,7 @@ import {
   SERVICE_CATEGORY_REPO,
   SEGMENT_CATEGORY_REPO,
   ITEM_SEGMENT_SERVICE_PRICE_REPO,
-  STORAGE_ADAPTER,
 } from '../../../infra/infra.module';
-
-function sanitizeIconName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'icon';
-}
-
-function contentTypeFromExt(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase();
-  const map: Record<string, string> = {
-    png: 'image/png',
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    webp: 'image/webp',
-  };
-  return map[ext ?? ''] ?? 'application/octet-stream';
-}
 
 @Injectable()
 export class AdminCatalogService {
@@ -52,7 +35,6 @@ export class AdminCatalogService {
     @Inject(SERVICE_CATEGORY_REPO) private readonly serviceCategoryRepo: ServiceCategoryRepo,
     @Inject(SEGMENT_CATEGORY_REPO) private readonly segmentCategoryRepo: SegmentCategoryRepo,
     @Inject(ITEM_SEGMENT_SERVICE_PRICE_REPO) private readonly itemSegmentServicePriceRepo: ItemSegmentServicePriceRepo,
-    @Inject(STORAGE_ADAPTER) private readonly storageAdapter: StorageAdapter,
   ) {}
 
   async listItems(withPrices = false) {
@@ -196,13 +178,8 @@ export class AdminCatalogService {
   }
 
   /** Upload a custom icon image (PNG/JPG). Returns the URL to store on the item (icon field). */
-  async uploadCatalogIcon(buffer: Buffer, originalName: string): Promise<{ url: string }> {
-    const safeName = sanitizeIconName(originalName);
-    const fileName = `icon-${Date.now()}-${safeName}`;
-    const pathKey = `catalog-icons/${fileName}`;
-    const contentType = contentTypeFromExt(originalName);
-    const publicUrl = await this.storageAdapter.putObject(pathKey, buffer, contentType);
-    const url = (typeof publicUrl === 'string' ? publicUrl : null) ?? `/api/assets/catalog-icons/${fileName}`;
+  async uploadCatalogIcon(fileName: string, _iconKey?: string): Promise<{ url: string }> {
+    const url = `/api/assets/catalog-icons/${fileName}`;
     return { url };
   }
 

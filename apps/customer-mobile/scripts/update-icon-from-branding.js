@@ -1,7 +1,8 @@
 /**
  * Downloads the branding logo from the API and saves it as the app icon.
  * Run from repo root: node apps/customer-mobile/scripts/update-icon-from-branding.js
- * Requires: EXPO_PUBLIC_API_URL in .env (e.g. https://your-api.onrender.com or http://localhost:3006)
+ * Requires: EXPO_PUBLIC_API_URL in .env (with or without /api), e.g.
+ * https://weyouapi.krackbot.com/api or http://192.168.x.x:3009
  * Ensure a logo is uploaded in admin branding first.
  *
  * When branding fetch or logo download fails (e.g. API down or cold start), the script
@@ -19,6 +20,11 @@ function readEnvVar(envPath, key) {
   const m = env.match(new RegExp(key + '=(.+)'));
   if (!m) return null;
   return m[1].trim().replace(/^["']|["']$/g, '').split('#')[0].trim();
+}
+
+function normalizeApiRoot(raw) {
+  const trimmed = String(raw || '').trim().replace(/\/$/, '');
+  return trimmed.replace(/\/api\/?$/, '');
 }
 
 /** Fatal: missing config, script cannot run. */
@@ -51,7 +57,7 @@ async function main() {
   if (!directLogoUrl && !API_BASE) {
     fatal('Set EXPO_PUBLIC_API_URL or UPDATE_ICON_LOGO_URL in apps/customer-mobile/.env\nOr pass the logo URL: npm run update-icon-from-branding -- <API_BASE>/api/assets/branding/logo.png');
   }
-  const base = API_BASE ? API_BASE.replace(/\/$/, '') : '';
+  const base = normalizeApiRoot(API_BASE);
   let fullUrl;
   if (directLogoUrl && directLogoUrl.trim()) {
     fullUrl = directLogoUrl.trim();
@@ -78,11 +84,11 @@ async function main() {
     } catch (e) {
       softFail(`Invalid JSON from branding API: ${e.message}`);
     }
-    const logoUrl = data && data.logoUrl;
-    if (!logoUrl || !String(logoUrl).trim()) {
-      softFail('No logoUrl in branding. Upload a logo in admin or set UPDATE_ICON_LOGO_URL.');
+    const iconUrl = data && (data.appIconUrl || data.logoUrl);
+    if (!iconUrl || !String(iconUrl).trim()) {
+      softFail('No appIconUrl/logoUrl in branding. Upload an app icon in admin or set UPDATE_ICON_LOGO_URL.');
     }
-    fullUrl = logoUrl.startsWith('http') ? logoUrl : `${base}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}`;
+    fullUrl = iconUrl.startsWith('http') ? iconUrl : `${base}${iconUrl.startsWith('/') ? '' : '/'}${iconUrl}`;
   }
   let imgRes;
   try {

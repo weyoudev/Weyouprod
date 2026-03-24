@@ -27,9 +27,11 @@ export function AddItemModal({ open, onOpenChange }: AddItemModalProps) {
   const [name, setName] = useState('');
   const [active, setActive] = useState(true);
   const [icon, setIcon] = useState<string | ''>('');
+  const [iconCacheBuster, setIconCacheBuster] = useState<string>('');
   const [error, setError] = useState<unknown>(null);
   const createItem = useCreateItem();
   const uploadCatalogIcon = useUploadCatalogIcon();
+  const [iconUploadKey] = useState(() => `new-item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +84,7 @@ export function AddItemModal({ open, onOpenChange }: AddItemModalProps) {
               <div className="flex flex-wrap items-center gap-3">
                 {icon && (
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50">
-                    <CatalogItemIcon icon={icon} size={22} />
+                    <CatalogItemIcon icon={icon} size={22} cacheBuster={iconCacheBuster} />
                   </span>
                 )}
                 <input
@@ -92,9 +94,10 @@ export function AddItemModal({ open, onOpenChange }: AddItemModalProps) {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    uploadCatalogIcon.mutate(file, {
+                    uploadCatalogIcon.mutate({ file, key: iconUploadKey }, {
                       onSuccess: (url) => {
                         setIcon(url);
+                        setIconCacheBuster(String(Date.now()));
                         toast.success('Icon uploaded');
                       },
                       onError: (err) => {

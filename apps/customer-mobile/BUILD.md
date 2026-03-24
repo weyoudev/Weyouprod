@@ -75,6 +75,16 @@ eas build --platform android --profile production
 
 This produces an **AAB** (Android App Bundle) for upload to Google Play Console. Configure signing (e.g. EAS credentials) and optionally `eas submit` as in `eas.json`.
 
+### EAS “Install dependencies” failed (monorepo + Prisma)
+
+This app lives in an **npm workspace** with the API at the repo root. A root `npm install` on EAS runs **`@prisma/client`’s postinstall** (`prisma generate`), which often breaks on mobile build workers.
+
+`eas.json` sets **`PRISMA_SKIP_POSTINSTALL_GENERATE=1`** on build profiles so install can finish. (Only affects the EAS builder; run `npm run prisma:generate` locally for the API as usual.)
+
+### Branding icon script before build
+
+`update-icon-from-branding` runs **on your machine** before upload. It needs a reachable API URL: set **`EXPO_PUBLIC_API_URL`** in `apps/customer-mobile/.env`, or pass a public base URL so it is not stuck on a LAN IP like `192.168.x.x`.
+
 ## First Beta build (iOS)
 
 From the repo root or from `apps/customer-mobile`:

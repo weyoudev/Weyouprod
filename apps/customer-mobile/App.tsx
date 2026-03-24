@@ -28,6 +28,7 @@ import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import * as DateTimePickerModule from '@react-native-community/datetimepicker';
 const DateTimePicker = DateTimePickerModule?.default ?? DateTimePickerModule;
+import krackbotLogo from './assets/krackbot-logo.png';
 import { checkApiConnection } from './src/config/api';
 import {
   checkServiceability,
@@ -1467,7 +1468,6 @@ export default function App() {
               </Text>
             </View>
           )}
-          <Text style={styles.welcomeSubtitle}>Enter your mobile number to continue.</Text>
         </View>
         {error && (
           <>
@@ -1490,7 +1490,7 @@ export default function App() {
           />
           <TextInput
             style={[styles.input, styles.mobileInput]}
-            placeholder="9876543210"
+            placeholder="Enter mobile number"
             keyboardType="phone-pad"
             value={mobile}
             onChangeText={(value) => setMobile(value.replace(/\D/g, '').slice(0, 10))}
@@ -1544,6 +1544,10 @@ export default function App() {
           </View>
         </Modal>
         </View>
+        <View style={styles.creditRowOnDark}>
+          <Image source={krackbotLogo} style={styles.creditLogo} resizeMode="contain" accessibilityLabel="Krackbot Studio logo" />
+          <Text style={styles.creditNoteOnDark}>Designed & Developed by Krackbot Studio</Text>
+        </View>
       </View>
     );
   } else if (step === 'otp') {
@@ -1556,9 +1560,6 @@ export default function App() {
         <View style={styles.welcomeCard}>
           <Text style={styles.title}>Verify OTP</Text>
           <Text style={styles.subtitle}>We have sent an OTP to {phone}.</Text>
-          <Text style={[styles.subtitle, { fontSize: 12, marginTop: 4, opacity: 0.8 }]}>
-            Development: if SMS is not configured, use OTP 123456
-          </Text>
           {error && <Text style={styles.error}>{error}</Text>}
           <TextInput
             style={styles.input}
@@ -1587,6 +1588,10 @@ export default function App() {
               <Text style={styles.buttonText}>{loading ? 'Verifying…' : 'Verify'}</Text>
             </TouchableOpacity>
           </View>
+        </View>
+        <View style={styles.creditRowOnDark}>
+          <Image source={krackbotLogo} style={styles.creditLogo} resizeMode="contain" accessibilityLabel="Krackbot Studio logo" />
+          <Text style={styles.creditNoteOnDark}>Designed & Developed by Krackbot Studio</Text>
         </View>
       </View>
     );
@@ -4042,21 +4047,21 @@ const styles = StyleSheet.create({
   },
   welcomeHeader: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 4,
   },
   welcomeLogo: {
-    width: 140,
-    height: 140,
-    marginBottom: 12,
+    width: 220,
+    height: 220,
+    marginBottom: 0,
   },
   welcomeLogoPlaceholder: {
-    width: 140,
-    height: 140,
+    width: 220,
+    height: 220,
     borderRadius: 20,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 0,
   },
   welcomeLogoPlaceholderText: {
     fontSize: 42,
@@ -4609,6 +4614,39 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginBottom: 8,
+  },
+  creditNote: {
+    marginTop: 0,
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'left',
+    flexShrink: 1,
+  },
+  creditRow: {
+    marginTop: 'auto',
+    paddingTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  creditRowOnDark: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  creditNoteOnDark: {
+    marginTop: 0,
+    fontSize: 12,
+    color: '#F6EAF4',
+    textAlign: 'left',
+    flexShrink: 1,
+  },
+  creditLogo: {
+    width: 22,
+    height: 22,
   },
   addressCard: {
     padding: 12,

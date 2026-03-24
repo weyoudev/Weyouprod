@@ -12,6 +12,9 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Role } from '@shared/enums';
 import { JwtAuthGuard } from '../../common/jwt-auth.guard';
 import { Roles } from '../../common/roles.decorator';
@@ -19,8 +22,58 @@ import { RolesGuard } from '../../common/roles.guard';
 import { AdminCarouselService } from '../services/admin-carousel.service';
 
 interface MulterUploadFile {
-  buffer?: Buffer;
+  filename?: string;
   originalname?: string;
+}
+
+function sanitizeOriginalName(name: string): string {
+  return (name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100) || 'file';
+}
+
+function extFromName(name: string): string {
+  const clean = sanitizeOriginalName(name);
+  const ext = path.extname(clean).toLowerCase();
+  if (ext === '.png' || ext === '.jpg' || ext === '.jpeg' || ext === '.webp') return ext;
+  return '.png';
+}
+
+function resolveApiAssetsRoot(): string {
+  const cwd = process.cwd();
+  const monorepoApiRoot = path.resolve(cwd, 'apps', 'api');
+  const apiRoot = fs.existsSync(path.join(monorepoApiRoot, 'src'))
+    ? monorepoApiRoot
+    : cwd;
+  const assetsRoot = path.join(apiRoot, 'assets');
+  if (!fs.existsSync(assetsRoot)) fs.mkdirSync(assetsRoot, { recursive: true });
+  return assetsRoot;
+}
+
+function carouselMulterOptions() {
+  const destination = path.join(resolveApiAssetsRoot(), 'carousel');
+  if (!fs.existsSync(destination)) fs.mkdirSync(destination, { recursive: true });
+  return {
+    storage: diskStorage({
+      destination: (_req, _file, cb) => cb(null, destination),
+      filename: (req, file, cb) => {
+        const rawPos = String(req.query?.position ?? '');
+        const pos = Number(rawPos);
+        const slot = [1, 2, 3].includes(pos) ? pos : 1;
+        const base = `carousel-${slot}`;
+        const ext = extFromName(file.originalname);
+        const finalName = `${base}${ext}`;
+        try {
+          for (const existing of fs.readdirSync(destination)) {
+            if (existing.startsWith(base) && existing !== finalName) {
+              fs.unlinkSync(path.join(destination, existing));
+            }
+          }
+        } catch {
+          // best-effort cleanup only
+        }
+        cb(null, finalName);
+      },
+    }),
+  };
 }
 
 @Controller('admin/carousel')
@@ -36,7 +89,7 @@ export class AdminCarouselController {
 
   @Post('upload')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', carouselMulterOptions()))
   async upload(
     @UploadedFile() file: MulterUploadFile,
     @Query('position', new ParseIntPipe()) position: number,
@@ -44,12 +97,11 @@ export class AdminCarouselController {
     if (position < 1 || position > 3) {
       throw new BadRequestException('position must be between 1 and 3');
     }
-    if (!file?.buffer) {
+    if (!file?.filename) {
       throw new BadRequestException('File is required');
     }
     return this.adminCarouselService.upload(
-      file.buffer,
-      file.originalname ?? 'image',
+      file.filename,
       position,
     );
   }

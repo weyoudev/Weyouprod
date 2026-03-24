@@ -152,7 +152,7 @@ export function AddItemsToInvoiceDialog({
                 onClick={() => openConfig(item.id)}
               >
                 <span className="flex items-center justify-center w-14 h-14 rounded-lg border bg-muted/50 mb-2 shrink-0">
-                  <CatalogItemIcon icon={item.icon} size={40} />
+                  <CatalogItemIcon icon={item.icon} size={40} cacheBuster={item.updatedAt} />
                 </span>
                 <span className="font-medium text-sm text-center line-clamp-2">{item.name}</span>
               </button>

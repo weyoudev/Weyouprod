@@ -10,6 +10,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Role } from '@shared/enums';
 import { JwtAuthGuard } from '../../common/jwt-auth.guard';
 import { CurrentUser } from '../../common/current-user.decorator';
@@ -21,8 +24,55 @@ import { UpdateBrandingDto } from '../dto/update-branding.dto';
 
 /** File from multer memory storage (used by FileInterceptor). */
 interface MulterUploadFile {
-  buffer?: Buffer;
+  filename?: string;
   originalname?: string;
+}
+
+function sanitizeOriginalName(name: string): string {
+  return (name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100) || 'file';
+}
+
+function extFromName(name: string): string {
+  const clean = sanitizeOriginalName(name);
+  const ext = path.extname(clean).toLowerCase();
+  if (ext === '.png' || ext === '.jpg' || ext === '.jpeg' || ext === '.webp') return ext;
+  return '.png';
+}
+
+function resolveApiAssetsRoot(): string {
+  const cwd = process.cwd();
+  const monorepoApiRoot = path.resolve(cwd, 'apps', 'api');
+  const apiRoot = fs.existsSync(path.join(monorepoApiRoot, 'src'))
+    ? monorepoApiRoot
+    : cwd;
+  const assetsRoot = path.join(apiRoot, 'assets');
+  if (!fs.existsSync(assetsRoot)) fs.mkdirSync(assetsRoot, { recursive: true });
+  return assetsRoot;
+}
+
+function brandingMulterOptions(prefix: string) {
+  const destination = path.join(resolveApiAssetsRoot(), 'branding');
+  if (!fs.existsSync(destination)) fs.mkdirSync(destination, { recursive: true });
+  const stableBase = prefix || 'logo-';
+  return {
+    storage: diskStorage({
+      destination: (_req, _file, cb) => cb(null, destination),
+      filename: (_req, file, cb) => {
+        const ext = extFromName(file.originalname);
+        const finalName = `${stableBase}${ext}`;
+        try {
+          for (const existing of fs.readdirSync(destination)) {
+            if (existing.startsWith(stableBase) && existing !== finalName) {
+              fs.unlinkSync(path.join(destination, existing));
+            }
+          }
+        } catch {
+          // best-effort cleanup only
+        }
+        cb(null, finalName);
+      },
+    }),
+  };
 }
 
 @Controller('admin/branding')
@@ -61,41 +111,41 @@ export class AdminBrandingController {
 
   @Post('logo')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', brandingMulterOptions('logo')))
   async uploadLogo(@UploadedFile() file: MulterUploadFile) {
-    if (!file?.buffer) {
+    if (!file?.filename) {
       throw new BadRequestException('File is required');
     }
-    return this.adminBrandingService.uploadLogo(file.buffer, file.originalname ?? 'logo');
+    return this.adminBrandingService.uploadLogo(file.filename);
   }
 
   @Post('upi-qr')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', brandingMulterOptions('upi-qr')))
   async uploadUpiQr(@UploadedFile() file: MulterUploadFile) {
-    if (!file?.buffer) {
+    if (!file?.filename) {
       throw new BadRequestException('File is required');
     }
-    return this.adminBrandingService.uploadUpiQr(file.buffer, file.originalname ?? 'upi-qr');
+    return this.adminBrandingService.uploadUpiQr(file.filename);
   }
 
   @Post('welcome-background')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', brandingMulterOptions('welcome-bg')))
   async uploadWelcomeBackground(@UploadedFile() file: MulterUploadFile) {
-    if (!file?.buffer) {
+    if (!file?.filename) {
       throw new BadRequestException('File is required');
     }
-    return this.adminBrandingService.uploadWelcomeBackground(file.buffer, file.originalname ?? 'welcome-bg');
+    return this.adminBrandingService.uploadWelcomeBackground(file.filename);
   }
 
   @Post('app-icon')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', brandingMulterOptions('app-icon')))
   async uploadAppIcon(@UploadedFile() file: MulterUploadFile) {
-    if (!file?.buffer) {
+    if (!file?.filename) {
       throw new BadRequestException('File is required');
     }
-    return this.adminBrandingService.uploadAppIcon(file.buffer, file.originalname ?? 'app-icon');
+    return this.adminBrandingService.uploadAppIcon(file.filename);
   }
 }

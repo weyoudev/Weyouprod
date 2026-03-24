@@ -517,7 +517,7 @@ export function InvoiceBuilder({
                                     return it ? (
                                       <>
                                         <span className="flex shrink-0 items-center justify-center">
-                                          <CatalogItemIcon icon={it.icon} size={18} className="shrink-0" />
+                                          <CatalogItemIcon icon={it.icon} size={18} className="shrink-0" cacheBuster={it.updatedAt} />
                                         </span>
                                         <span className="min-w-0 truncate text-left">
                                           <SelectValue className="truncate">{it.name}</SelectValue>
@@ -534,7 +534,7 @@ export function InvoiceBuilder({
                                   <SelectItem key={x.id} value={x.id}>
                                     <span className="flex items-center gap-2">
                                       <span className="flex shrink-0 items-center">
-                                        <CatalogItemIcon icon={x.icon} size={18} className="shrink-0 inline-block align-middle" />
+                                        <CatalogItemIcon icon={x.icon} size={18} className="shrink-0 inline-block align-middle" cacheBuster={x.updatedAt} />
                                       </span>
                                       <span className="truncate">{x.name}</span>
                                     </span>
@@ -550,7 +550,7 @@ export function InvoiceBuilder({
                               return it ? (
                                 <span className="flex items-center gap-2">
                                   <span className="flex shrink-0 items-center">
-                                    <CatalogItemIcon icon={it.icon} size={18} className="shrink-0 inline-block align-middle" />
+                                    <CatalogItemIcon icon={it.icon} size={18} className="shrink-0 inline-block align-middle" cacheBuster={it.updatedAt} />
                                   </span>
                                   <span className="truncate">{row.name}</span>
                                 </span>

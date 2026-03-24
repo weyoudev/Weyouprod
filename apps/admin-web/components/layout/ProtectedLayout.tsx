@@ -20,7 +20,10 @@ export function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { data: branding } = useBranding();
   const logoUrl = branding?.logoUrl
-    ? (branding.logoUrl.startsWith('http') ? branding.logoUrl : `${getApiOrigin()}${branding.logoUrl}`)
+    ? (() => {
+        const base = branding.logoUrl.startsWith('http') ? branding.logoUrl : `${getApiOrigin()}${branding.logoUrl}`;
+        return `${base}${base.includes('?') ? '&' : '?'}v=${encodeURIComponent(branding.updatedAt)}`;
+      })()
     : null;
 
   useEffect(() => {

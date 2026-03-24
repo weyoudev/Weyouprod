@@ -1,6 +1,7 @@
 import { API_BASE_URL, getApiBase, API_TIMEOUT_MS } from './config/api';
 
 const apiBase = getApiBase;
+const apiRoot = (): string => (API_BASE_URL ? API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/$/, '') : '');
 
 /** Fetch with timeout (uses API_TIMEOUT_MS). Clears timeout on success or throw. */
 async function fetchWithTimeout(
@@ -85,7 +86,7 @@ export async function getPublicBranding(): Promise<PublicBrandingResponse> {
 export function brandingLogoFullUrl(logoUrl: string | null): string | null {
   if (!logoUrl?.trim()) return null;
   if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) return logoUrl;
-  const base = API_BASE_URL ? API_BASE_URL.replace(/\/$/, '') : '';
+  const base = apiRoot();
   if (!base) return null;
   const path = logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`;
   return `${base}${path}`;
@@ -118,7 +119,7 @@ export async function getPublicCarousel(): Promise<PublicCarouselResponse> {
 export function carouselImageFullUrl(imageUrl: string): string {
   if (!imageUrl?.trim()) return '';
   if (imageUrl.startsWith('http')) return imageUrl;
-  const base = API_BASE_URL ? API_BASE_URL.replace(/\/$/, '') : '';
+  const base = apiRoot();
   if (!base) return imageUrl;
   const path = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
   return `${base}${path}`;

@@ -79,6 +79,7 @@ export function EditItemModal({
   const [newServiceName, setNewServiceName] = useState('');
   const [localCategories, setLocalCategories] = useState<ServiceCategory[]>([]);
   const [localSegments, setLocalSegments] = useState<SegmentCategory[]>([]);
+  const [iconCacheBuster, setIconCacheBuster] = useState<string>('');
 
   const updateMatrix = useUpdateItemWithMatrix(item?.id ?? '');
   const createCategory = useCreateServiceCategory();
@@ -113,6 +114,7 @@ export function EditItemModal({
       setError(null);
       setLocalCategories([]);
       setLocalSegments([]);
+      setIconCacheBuster(item.updatedAt ?? '');
     }
   }, [item?.id, open]);
 
@@ -316,7 +318,7 @@ export function EditItemModal({
               <div className="flex flex-wrap items-center gap-3">
                 {icon && (
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50">
-                    <CatalogItemIcon icon={icon} size={22} />
+                    <CatalogItemIcon icon={icon} size={22} cacheBuster={iconCacheBuster} />
                   </span>
                 )}
                 <input
@@ -326,9 +328,10 @@ export function EditItemModal({
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    uploadCatalogIcon.mutate(file, {
+                    uploadCatalogIcon.mutate({ file, key: item?.id }, {
                       onSuccess: (url) => {
                         setIcon(url);
+                        setIconCacheBuster(String(Date.now()));
                         toast.success('Icon uploaded');
                       },
                       onError: (err) => {

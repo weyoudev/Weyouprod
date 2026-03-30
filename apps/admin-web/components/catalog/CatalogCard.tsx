@@ -59,7 +59,7 @@ export function CatalogCard({ item, serviceCategories, segmentCategories, canEdi
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50 text-muted-foreground">
-            <CatalogItemIcon icon={item.icon} size={22} />
+            <CatalogItemIcon icon={item.icon} size={22} cacheBuster={item.updatedAt} />
           </span>
           <span className="font-medium">{item.name}</span>
           <span

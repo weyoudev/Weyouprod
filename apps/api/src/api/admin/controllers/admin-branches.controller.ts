@@ -12,6 +12,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Role } from '@shared/enums';
 import { JwtAuthGuard } from '../../common/jwt-auth.guard';
 import { Roles } from '../../common/roles.decorator';
@@ -21,8 +24,56 @@ import { CreateBranchDto } from '../dto/create-branch.dto';
 import { UpdateBranchDto } from '../dto/update-branch.dto';
 
 interface MulterUploadFile {
-  buffer?: Buffer;
+  filename?: string;
   originalname?: string;
+}
+
+function sanitizeOriginalName(name: string): string {
+  return (name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100) || 'file';
+}
+
+function extFromName(name: string): string {
+  const clean = sanitizeOriginalName(name);
+  const ext = path.extname(clean).toLowerCase();
+  if (ext === '.png' || ext === '.jpg' || ext === '.jpeg' || ext === '.webp') return ext;
+  return '.png';
+}
+
+function resolveApiAssetsRoot(): string {
+  const cwd = process.cwd();
+  const monorepoApiRoot = path.resolve(cwd, 'apps', 'api');
+  const apiRoot = fs.existsSync(path.join(monorepoApiRoot, 'src'))
+    ? monorepoApiRoot
+    : cwd;
+  const assetsRoot = path.join(apiRoot, 'assets');
+  if (!fs.existsSync(assetsRoot)) fs.mkdirSync(assetsRoot, { recursive: true });
+  return assetsRoot;
+}
+
+function branchBrandingMulterOptions(kind: 'logo' | 'upi-qr') {
+  const destination = path.join(resolveApiAssetsRoot(), 'branding', 'branches');
+  if (!fs.existsSync(destination)) fs.mkdirSync(destination, { recursive: true });
+  return {
+    storage: diskStorage({
+      destination: (_req, _file, cb) => cb(null, destination),
+      filename: (req, file, cb) => {
+        const branchId = String(req.params?.id ?? 'branch');
+        const base = `branch-${branchId}-${kind}`;
+        const ext = extFromName(file.originalname);
+        const finalName = `${base}${ext}`;
+        try {
+          for (const existing of fs.readdirSync(destination)) {
+            if (existing.startsWith(base) && existing !== finalName) {
+              fs.unlinkSync(path.join(destination, existing));
+            }
+          }
+        } catch {
+          // best-effort cleanup only
+        }
+        cb(null, finalName);
+      },
+    }),
+  };
 }
 
 @Controller('admin/branches')
@@ -88,35 +139,27 @@ export class AdminBranchesController {
 
   @Post(':id/logo')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', branchBrandingMulterOptions('logo')))
   async uploadLogo(
     @Param('id') id: string,
     @UploadedFile() file: MulterUploadFile,
   ) {
-    if (!file?.buffer) {
+    if (!file?.filename) {
       throw new BadRequestException('File is required');
     }
-    return this.adminBranchesService.uploadLogo(
-      id,
-      file.buffer,
-      file.originalname ?? 'logo',
-    );
+    return this.adminBranchesService.uploadLogo(id, file.filename);
   }
 
   @Post(':id/upi-qr')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', branchBrandingMulterOptions('upi-qr')))
   async uploadUpiQr(
     @Param('id') id: string,
     @UploadedFile() file: MulterUploadFile,
   ) {
-    if (!file?.buffer) {
+    if (!file?.filename) {
       throw new BadRequestException('File is required');
     }
-    return this.adminBranchesService.uploadUpiQr(
-      id,
-      file.buffer,
-      file.originalname ?? 'upi-qr',
-    );
+    return this.adminBranchesService.uploadUpiQr(id, file.filename);
   }
 }

@@ -39,15 +39,20 @@ interface CatalogItemIconProps {
   icon?: string | null;
   size?: number;
   className?: string;
+  /** Optional cache-buster appended as query param for URL icons. */
+  cacheBuster?: string | null;
 }
 
-export function CatalogItemIcon({ icon, size = 22, className }: CatalogItemIconProps) {
+export function CatalogItemIcon({ icon, size = 22, className, cacheBuster }: CatalogItemIconProps) {
   if (!icon) {
     const IconComponent = DEFAULT_ICON;
     return <IconComponent size={size} className={className} />;
   }
   if (icon.startsWith('/') || icon.startsWith('http')) {
-    const src = icon.startsWith('http') ? icon : `${getApiOrigin()}${icon}`;
+    const baseSrc = icon.startsWith('http') ? icon : `${getApiOrigin()}${icon}`;
+    const src = cacheBuster
+      ? `${baseSrc}${baseSrc.includes('?') ? '&' : '?'}v=${encodeURIComponent(cacheBuster)}`
+      : baseSrc;
     return (
       <img
         src={src}

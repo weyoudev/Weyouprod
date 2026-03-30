@@ -183,10 +183,11 @@ export function useImportSample() {
 /** Upload a custom catalog icon (PNG/JPG). Returns the URL to store on the item (icon field). */
 export function useUploadCatalogIcon() {
   return useMutation({
-    mutationFn: async (file: File): Promise<string> => {
+    mutationFn: async ({ file, key }: { file: File; key?: string }): Promise<string> => {
       const form = new FormData();
       form.append('file', file);
-      const res = await api.post<{ url: string }>('/admin/catalog/icon/upload', form, {
+      const query = key ? `?key=${encodeURIComponent(key)}` : '';
+      const res = await api.post<{ url: string }>(`/admin/catalog/icon/upload${query}`, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       return res.data.url;

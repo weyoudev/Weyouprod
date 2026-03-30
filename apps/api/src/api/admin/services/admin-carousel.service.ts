@@ -1,30 +1,14 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import type { CarouselRepo, StorageAdapter } from '../../../application/ports';
-import { CAROUSEL_REPO, STORAGE_ADAPTER } from '../../../infra/infra.module';
+import type { CarouselRepo } from '../../../application/ports';
+import { CAROUSEL_REPO } from '../../../infra/infra.module';
 
 const MAX_IMAGES = 3;
 const POSITIONS = [1, 2, 3] as const;
-
-function sanitizeOriginalName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100) || 'file';
-}
-
-function contentTypeFromExt(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase();
-  const map: Record<string, string> = {
-    png: 'image/png',
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    webp: 'image/webp',
-  };
-  return map[ext ?? ''] ?? 'application/octet-stream';
-}
 
 @Injectable()
 export class AdminCarouselService {
   constructor(
     @Inject(CAROUSEL_REPO) private readonly carouselRepo: CarouselRepo,
-    @Inject(STORAGE_ADAPTER) private readonly storageAdapter: StorageAdapter,
   ) {}
 
   async list() {
@@ -47,16 +31,11 @@ export class AdminCarouselService {
     return { slots: [byPosition[1], byPosition[2], byPosition[3]] };
   }
 
-  async upload(buffer: Buffer, originalName: string, position: number) {
+  async upload(fileName: string, position: number) {
     if (!POSITIONS.includes(position as 1 | 2 | 3)) {
       throw new BadRequestException('Position must be 1, 2, or 3');
     }
-    const safeName = sanitizeOriginalName(originalName);
-    const fileName = `${Date.now()}-${safeName}`;
-    const pathKey = `carousel/${fileName}`;
-    const contentType = contentTypeFromExt(originalName);
-    const publicUrl = await this.storageAdapter.putObject(pathKey, buffer, contentType);
-    const imageUrl = (typeof publicUrl === 'string' ? publicUrl : null) ?? `/api/assets/carousel/${fileName}`;
+    const imageUrl = `/api/assets/carousel/${fileName}`;
     const record = await this.carouselRepo.setImage(position, imageUrl);
     return {
       position: record.position,

@@ -1,27 +1,11 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import type { BranchRepo, StorageAdapter } from '../../../application/ports';
-import { BRANCH_REPO, STORAGE_ADAPTER } from '../../../infra/infra.module';
-
-function sanitizeOriginalName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100) || 'file';
-}
-
-function contentTypeFromExt(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase();
-  const map: Record<string, string> = {
-    png: 'image/png',
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    webp: 'image/webp',
-  };
-  return map[ext ?? ''] ?? 'application/octet-stream';
-}
+import type { BranchRepo } from '../../../application/ports';
+import { BRANCH_REPO } from '../../../infra/infra.module';
 
 @Injectable()
 export class AdminBranchesService {
   constructor(
     @Inject(BRANCH_REPO) private readonly branchRepo: BranchRepo,
-    @Inject(STORAGE_ADAPTER) private readonly storageAdapter: StorageAdapter,
   ) {}
 
   async list() {
@@ -56,26 +40,16 @@ export class AdminBranchesService {
     return this.branchRepo.delete(id);
   }
 
-  async uploadLogo(branchId: string, buffer: Buffer, originalName: string) {
+  async uploadLogo(branchId: string, fileName: string) {
     await this.getById(branchId);
-    const safeName = sanitizeOriginalName(originalName);
-    const fileName = `branch-${branchId}-${Date.now()}-${safeName}`;
-    const pathKey = `branding/branches/${fileName}`;
-    const contentType = contentTypeFromExt(originalName);
-    const publicUrl = await this.storageAdapter.putObject(pathKey, buffer, contentType);
-    const url = (typeof publicUrl === 'string' ? publicUrl : null) ?? `/api/assets/branding/branches/${fileName}`;
+    const url = `/api/assets/branding/branches/${fileName}`;
     await this.branchRepo.setLogoUrl(branchId, url);
     return this.getById(branchId);
   }
 
-  async uploadUpiQr(branchId: string, buffer: Buffer, originalName: string) {
+  async uploadUpiQr(branchId: string, fileName: string) {
     await this.getById(branchId);
-    const safeName = sanitizeOriginalName(originalName);
-    const fileName = `branch-${branchId}-qr-${Date.now()}-${safeName}`;
-    const pathKey = `branding/branches/${fileName}`;
-    const contentType = contentTypeFromExt(originalName);
-    const publicUrl = await this.storageAdapter.putObject(pathKey, buffer, contentType);
-    const url = (typeof publicUrl === 'string' ? publicUrl : null) ?? `/api/assets/branding/branches/${fileName}`;
+    const url = `/api/assets/branding/branches/${fileName}`;
     await this.branchRepo.setUpiQrUrl(branchId, url);
     return this.getById(branchId);
   }

@@ -1,17 +1,30 @@
 {
   "cli": {
     "version": ">= 12.0.0",
-    "appVersionSource": "remote"
+    "appVersionSource": "local"
   },
   "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
+    "base": {
+      "node": "20.19.4"
     },
-    "preview": {
+    "development": {
+      "extends": "base",
+      "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://version-01-j4co.onrender.com"
+        "PRISMA_SKIP_POSTINSTALL_GENERATE": "1",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "1"
+      }
+    },
+    "preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "env": {
+        "PRISMA_SKIP_POSTINSTALL_GENERATE": "1",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "1",
+        "EXPO_PUBLIC_API_URL": "https://weyouapi.krackbot.com/api"
       },
       "android": {
         "buildType": "apk"
@@ -19,8 +32,12 @@
       "channel": "preview"
     },
     "production": {
+      "extends": "base",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://version-01-j4co.onrender.com"
+        "PRISMA_SKIP_POSTINSTALL_GENERATE": "1",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "1",
+        "EXPO_PUBLIC_API_URL": "https://weyouapi.krackbot.com/api"
       },
       "android": {
         "buildType": "app-bundle"

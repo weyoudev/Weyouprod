@@ -10,46 +10,81 @@ dist/
 build/
 *.tsbuildinfo
 
-# Env and secrets
+# Env and secrets (allow *.example templates to be committed)
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.local
+.env.*
+!.env.example
+!**/.env.example
+!.env.local.example
+!**/.env.local.example
+!.env*.example
+!**/.env*.example
+.envrc
 
-# Debug
+# Local API file storage (dev disk uploads — logos, PDFs, etc.)
+/storage/
+apps/api/storage/
+
+# Debug & package managers
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.pnpm-store/
 
-# IDE
+# IDE / editor (personal or machine-specific)
 .idea/
 .vscode/
-.cursor/mcp.json
 *.swp
 *.swo
-.claude
-.agent
-.cursor
-.agents
-.expo
-.expo-shared
+*~
 
+# Cursor / AI tooling (local config; keep repo clean)
+.cursor/
+.claude/
+.agent/
+.agents/
 
+# Expo / React Native (also see apps/customer-mobile/.gitignore)
+.expo/
+.expo-shared/
+web-build/
+*.jks
+*.p8
+*.p12
+*.mobileprovision
 
-# OS
-.DS_Store
-Thumbs.db
+# Mobile release binaries (build on CI / EAS; do not commit)
+*.apk
+*.aab
+*.ipa
 
-# Prisma
+# Deploy / host metadata
+.vercel/
+.netlify/
+.turbo/
+
+# Prisma generated client (regenerate with npm run prisma:generate)
 apps/api/src/infra/generated/
 
 # Testing
 coverage/
 .nyc_output/
 
-# Misc
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# Misc caches & temp
 *.log
 .cache/
+*.pem
+*.orig
+*.bak
+.eslintcache
+
+# Optional local files
+*.local
+!*.local.example

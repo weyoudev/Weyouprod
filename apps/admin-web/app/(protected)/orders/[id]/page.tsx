@@ -922,7 +922,7 @@ export default function OrderDetailPage() {
             <div className="flex-shrink-0 flex justify-start">
               {branding?.logoUrl ? (
                 <img
-                  src={branding.logoUrl.startsWith('http') ? branding.logoUrl : `${getApiOrigin()}${branding.logoUrl}`}
+                  src={`${branding.logoUrl.startsWith('http') ? branding.logoUrl : `${getApiOrigin()}${branding.logoUrl}`}${(branding.logoUrl.startsWith('http') ? branding.logoUrl : `${getApiOrigin()}${branding.logoUrl}`).includes('?') ? '&' : '?'}v=${encodeURIComponent(branding.updatedAt)}`}
                   alt="Logo"
                   className="h-14 w-auto object-contain object-left"
                 />
@@ -1252,7 +1252,7 @@ export default function OrderDetailPage() {
             <div className="flex-shrink-0 flex justify-start">
               {branding?.logoUrl ? (
                 <img
-                  src={branding.logoUrl.startsWith('http') ? branding.logoUrl : `${getApiOrigin()}${branding.logoUrl}`}
+                  src={`${branding.logoUrl.startsWith('http') ? branding.logoUrl : `${getApiOrigin()}${branding.logoUrl}`}${(branding.logoUrl.startsWith('http') ? branding.logoUrl : `${getApiOrigin()}${branding.logoUrl}`).includes('?') ? '&' : '?'}v=${encodeURIComponent(branding.updatedAt)}`}
                   alt="Logo"
                   className="h-14 w-auto object-contain object-left"
                 />

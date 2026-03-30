@@ -45,7 +45,8 @@
     "dev:customer": "npm run dev -w customer-web",
     "dev:customer-mobile": "cd apps/customer-mobile && npx expo start",
     "dev:customer-mobile:clear": "cd apps/customer-mobile && npx expo start -c",
-    "build:customer-mobile:apk": "cd apps/customer-mobile && npm run update-icon-from-branding && npx eas build --platform android --profile preview"
+    "build:customer-mobile:apk": "cd apps/customer-mobile && npm run update-icon-from-branding && npx eas build --platform android --profile preview",
+    "build:customer-mobile:aab": "cd apps/customer-mobile && npm run build:android:production"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

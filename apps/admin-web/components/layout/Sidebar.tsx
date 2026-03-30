@@ -77,7 +77,10 @@ export function Sidebar({ user, collapsed = false, onToggleCollapse, mobileOpen 
   const { data: branding } = useBranding();
   const navItems = NAV.filter((item) => canAccessRoute(user.role, item.href));
   const logoUrl = branding?.logoUrl
-    ? (branding.logoUrl.startsWith('http') ? branding.logoUrl : `${getApiOrigin()}${branding.logoUrl}`)
+    ? (() => {
+        const base = branding.logoUrl.startsWith('http') ? branding.logoUrl : `${getApiOrigin()}${branding.logoUrl}`;
+        return `${base}${base.includes('?') ? '&' : '?'}v=${encodeURIComponent(branding.updatedAt)}`;
+      })()
     : null;
 
   const handleInvalidate = () => {

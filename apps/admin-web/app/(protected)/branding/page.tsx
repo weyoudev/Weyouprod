@@ -37,11 +37,11 @@ const businessFormSchema = z.object({
 
 type BusinessFormValues = z.infer<typeof businessFormSchema>;
 
-function imageUrl(url: string | null): string | null {
+function imageUrl(url: string | null, cacheBuster?: string | null): string | null {
   if (!url) return null;
-  if (url.startsWith('http')) return url;
-  const origin = getApiOrigin();
-  return `${origin}${url.startsWith('/') ? '' : '/'}${url}`;
+  const full = url.startsWith('http') ? url : `${getApiOrigin()}${url.startsWith('/') ? '' : '/'}${url}`;
+  if (!cacheBuster) return full;
+  return `${full}${full.includes('?') ? '&' : '?'}v=${encodeURIComponent(cacheBuster)}`;
 }
 
 export default function BrandingPage() {
@@ -180,10 +180,11 @@ export default function BrandingPage() {
     });
   };
 
-  const logoPreviewUrl = branding?.logoUrl ? imageUrl(branding.logoUrl) : null;
-  const upiQrPreviewUrl = branding?.upiQrUrl ? imageUrl(branding.upiQrUrl) : null;
-  const welcomeBgPreviewUrl = branding?.welcomeBackgroundUrl ? imageUrl(branding.welcomeBackgroundUrl) : null;
-  const appIconPreviewUrl = branding?.appIconUrl ? imageUrl(branding.appIconUrl) : null;
+  const brandingVersion = branding?.updatedAt ?? null;
+  const logoPreviewUrl = branding?.logoUrl ? imageUrl(branding.logoUrl, brandingVersion) : null;
+  const upiQrPreviewUrl = branding?.upiQrUrl ? imageUrl(branding.upiQrUrl, brandingVersion) : null;
+  const welcomeBgPreviewUrl = branding?.welcomeBackgroundUrl ? imageUrl(branding.welcomeBackgroundUrl, brandingVersion) : null;
+  const appIconPreviewUrl = branding?.appIconUrl ? imageUrl(branding.appIconUrl, brandingVersion) : null;
 
   const handleAppIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -532,7 +533,7 @@ export default function BrandingPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {([1, 2, 3] as const).map((pos) => {
                 const slot = slots[pos - 1];
-                const previewUrl = slot?.imageUrl ? imageUrl(slot.imageUrl) : null;
+                const previewUrl = slot?.imageUrl ? imageUrl(slot.imageUrl, slot?.updatedAt ?? null) : null;
                 return (
                   <div
                     key={pos}

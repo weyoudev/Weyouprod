@@ -21,6 +21,9 @@ RUN npm ci --legacy-peer-deps
 COPY apps/customer-pwa ./apps/customer-pwa
 COPY apps/customer-mobile ./apps/customer-mobile
 
+# Copy nginx config to a known location for the production stage
+COPY apps/customer-pwa/nginx.conf /app/nginx.conf
+
 # Set build-time environment variables (override via --build-arg)
 ARG EXPO_PUBLIC_SUPABASE_URL
 ARG EXPO_PUBLIC_SUPABASE_ANON_KEY
@@ -46,8 +49,8 @@ RUN npx expo export --platform web && node scripts/postexport-pwa.js
 # Stage 2: Serve with nginx
 FROM nginx:alpine AS production
 
-# Copy custom nginx config
-COPY apps/customer-pwa/nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom nginx config from builder stage
+COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built PWA files
 COPY --from=builder /app/apps/customer-pwa/dist /usr/share/nginx/html

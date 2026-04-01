@@ -73,6 +73,7 @@ export async function listInvoicesForOrder(
     phone?: string | null;
     gstNumber?: string | null;
     panNumber?: string | null;
+    footerNote?: string | null;
   } {
     const snap = (inv as { brandingSnapshotJson?: unknown })?.brandingSnapshotJson;
     if (!snap || typeof snap !== 'object') return {};
@@ -83,6 +84,7 @@ export async function listInvoicesForOrder(
       phone: (s.phone as string | null) ?? null,
       gstNumber: (s.gstNumber as string | null) ?? null,
       panNumber: (s.panNumber as string | null) ?? null,
+      footerNote: (s.footerNote as string | null) ?? null,
     };
   }
 
@@ -104,6 +106,7 @@ export async function listInvoicesForOrder(
       branchPhone: b.phone ?? null,
       gstNumber: b.gstNumber ?? null,
       panNumber: b.panNumber ?? null,
+      footerNote: b.footerNote ?? null,
       items: (inv.items ?? []).map((item) => ({
         id: item.id,
         type: item.type,

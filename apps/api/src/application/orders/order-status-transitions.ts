@@ -6,8 +6,10 @@ import { OrderStatus } from '@shared/enums';
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   [OrderStatus.BOOKING_CONFIRMED]: ['PICKED_UP' as OrderStatus, 'CANCELLED' as OrderStatus],
   [OrderStatus.PICKUP_SCHEDULED]: ['PICKED_UP' as OrderStatus, 'CANCELLED' as OrderStatus],
-  [OrderStatus.PICKED_UP]: ['IN_PROCESSING' as OrderStatus],
-  [OrderStatus.IN_PROCESSING]: ['READY' as OrderStatus],
+  // Simplified flow: BOOKING_CONFIRMED -> PICKED_UP -> OUT_FOR_DELIVERY -> DELIVERED.
+  // Keep legacy paths valid for backward compatibility with older states.
+  [OrderStatus.PICKED_UP]: ['IN_PROCESSING' as OrderStatus, 'OUT_FOR_DELIVERY' as OrderStatus],
+  [OrderStatus.IN_PROCESSING]: ['READY' as OrderStatus, 'OUT_FOR_DELIVERY' as OrderStatus],
   [OrderStatus.READY]: ['OUT_FOR_DELIVERY' as OrderStatus],
   [OrderStatus.OUT_FOR_DELIVERY]: ['DELIVERED' as OrderStatus],
   [OrderStatus.DELIVERED]: [],

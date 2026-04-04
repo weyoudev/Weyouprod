@@ -388,6 +388,36 @@ export default function App() {
     return () => sub.remove();
   }, [step]);
 
+  /** PWA / web: tab favicon from Admin Branding app icon (else logo). Fixes dev + stale bundled favicon.ico. */
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const win = (globalThis as { window?: Window & { document?: Document } }).window;
+    const doc = win?.document;
+    if (!doc?.head) return;
+    const raw = welcomeBranding?.appIconUrl || welcomeBranding?.logoUrl;
+    const href = brandingLogoFullUrl(raw ?? null);
+    if (!href) return;
+    doc.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach((node) => {
+      const el = node as HTMLLinkElement;
+      el.href = href;
+      el.type = 'image/png';
+    });
+    if (!doc.querySelector('link[rel="icon"]')) {
+      const el = doc.createElement('link');
+      el.rel = 'icon';
+      el.type = 'image/png';
+      el.href = href;
+      doc.head.appendChild(el);
+    }
+    let apple = doc.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement | null;
+    if (!apple) {
+      apple = doc.createElement('link');
+      apple.rel = 'apple-touch-icon';
+      doc.head.appendChild(apple);
+    }
+    apple.href = href;
+  }, [welcomeBranding?.appIconUrl, welcomeBranding?.logoUrl]);
+
   // Register for push notifications (lock screen) when user is logged in
   useEffect(() => {
     if (step !== 'done' || !token) return;

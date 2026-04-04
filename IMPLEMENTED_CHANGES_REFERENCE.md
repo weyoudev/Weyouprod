@@ -5,11 +5,13 @@ Project: Weyouprod monorepo
 
 ## Customer app (PWA + Mobile)
 
-- **Customer PWA — favicon & manifest icons (Admin Branding app icon):** The browser tab icon and PWA manifest icons come from **branding `appIconUrl`**, falling back to **`logoUrl`**, via `GET /api/branding/public` (same priority as `apps/customer-mobile/scripts/update-icon-from-branding.js` for native launcher icons).
+- **Customer PWA — favicon & manifest icons (Admin Branding app icon):** The browser tab icon and PWA manifest icons use **branding `appIconUrl`**, falling back to **`logoUrl`**, via `GET /api/branding/public` (same priority as `apps/customer-mobile/scripts/update-icon-from-branding.js` for native launcher icons).
+  - **`apps/customer-mobile/src/api.ts`:** `PublicBrandingResponse` and **`getPublicBranding()`** must include **`appIconUrl`** in the parsed return value (the API already returns it; the client previously omitted it, so the app icon never reached the UI layer).
+  - **`apps/customer-mobile/App.tsx` (web only):** After **`welcomeBranding`** loads, a **`useEffect`** sets **`document`** **`link[rel="icon"]`**, **`link[rel="shortcut icon"]`**, and **`apple-touch-icon`** to **`brandingLogoFullUrl(appIconUrl || logoUrl)`**, so **`expo start --web`** shows the Admin **App icon** without relying only on a static exported favicon. **`EXPO_PUBLIC_API_URL`** must point at the **API** (e.g. port for Nest), not only the admin web app.
   - **`apps/customer-pwa/package.json`:** `npm run build` runs `update-icon-from-branding.js` (updates `customer-mobile/assets` icon/favicon used by Expo) → `expo export --platform web` → `node scripts/postexport-pwa.js`.
   - **`apps/customer-pwa/scripts/postexport-pwa.js`:** Downloads the image again into **`dist/icon-192.png`**, **`dist/icon-512.png`**, **`dist/favicon.png`**; rewrites **`index.html`** to `<link rel="icon" type="image/png" href="/favicon.png" />` and adds **`apple-touch-icon`**; updates **`manifest.json`** to reference the PNG favicon when present. If the API is unreachable, falls back to copied **`customer-mobile/assets`** files.
-  - **`npm run sync-icons`** (in `customer-pwa`): runs only the branding download into `customer-mobile/assets` — useful before **`expo start --web`** so dev matches production icons.
-  - **Configuration:** `EXPO_PUBLIC_API_URL` must point at a running API during build (or set in Docker **build-arg** / CI env). Documented in **`apps/customer-pwa/.env.example`**.
+  - **`npm run sync-icons`** (in `customer-pwa`): runs only the branding download into `customer-mobile/assets` — useful before **`expo start --web`** so static assets match branding.
+  - **Configuration:** `EXPO_PUBLIC_API_URL` must point at a running API during build and at dev runtime (or set in Docker **build-arg** / CI env). Documented in **`apps/customer-pwa/.env.example`**.
 
 - **Order detail — Final invoice:** Removed the **Download** action from the **Final** invoice card (under line items / total). Customers still see the full on-screen invoice; subscription plan **invoice preview** still offers Download / Print / Share where applicable. Implementation: `apps/customer-mobile/App.tsx` (removed `openInvoice` download path for FINAL, `buildFinalInvoiceHtml`, `escapeHtml`, `imageToDataUri` + cache, static `expo-print` import). **Customer PWA** uses the same bundle — **rebuild/export** `apps/customer-pwa` after pulling so `dist/` is current.
 
@@ -43,7 +45,7 @@ Project: Weyouprod monorepo
   - footer note
   - optional email
 - Root cause fixed by sending explicit `null` instead of `undefined` on update payloads.
-- **App icon (`appIconUrl`):** Used for native launcher icons (via `update-icon-from-branding`) and, after the PWA build pipeline change above, for **customer PWA** favicon + manifest icons when `EXPO_PUBLIC_API_URL` can reach the API at build time.
+- **App icon (`appIconUrl`):** Used for native launcher icons (via `update-icon-from-branding`), for **customer PWA** static **`dist/`** icons at build time, and (via **`getPublicBranding()`** + web **`document`** links in **`App.tsx`**) for the **live browser tab** icon in dev and production when the customer app can call the API.
 
 ## Admin Catalog
 

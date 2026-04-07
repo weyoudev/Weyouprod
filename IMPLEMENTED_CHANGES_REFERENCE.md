@@ -1,6 +1,6 @@
 # Implemented Changes Reference
 
-Date: 2026-03-30 (updated 2026-04-04)  
+Date: 2026-03-30 (updated 2026-04-05)  
 Project: Weyouprod monorepo
 
 ## Customer app (PWA + Mobile)
@@ -46,6 +46,13 @@ Project: Weyouprod monorepo
   - optional email
 - Root cause fixed by sending explicit `null` instead of `undefined` on update payloads.
 - **App icon (`appIconUrl`):** Used for native launcher icons (via `update-icon-from-branding`), for **customer PWA** static **`dist/`** icons at build time, and (via **`getPublicBranding()`** + web **`document`** links in **`App.tsx`**) for the **live browser tab** icon in dev and production when the customer app can call the API.
+
+## Customer login (Mobile + PWA) — legal copy
+
+- **File:** `apps/customer-mobile/App.tsx`
+- Removed the separate **Terms and Conditions** link in the login acceptance checkbox.
+- Renamed the remaining link label from **Privacy Policy** to **Terms and conditions & Privacy policy** (single link; opens the privacy policy modal content).
+- Updated the “accept required” alert string shown when the user tries to request OTP without accepting.
 
 ## Admin Catalog
 
@@ -107,6 +114,15 @@ Project: Weyouprod monorepo
 - **Controllers** using `@Roles(..., AGENT_ROLE)` include admin orders, walk-in, invoices, payments, feedback, analytics reads, catalog read, etc. (see codebase for full set).
 - **Admin web:** `isBranchScopedStaff` / `isBranchFilterLocked` in `lib/auth.ts`; locked branch UI on relevant pages; **dashboard** avoids `useDashboardKpis` when branch-scoped and adjusts KPI visibility.
 - **Database:** Postgres enum `Role` must include `AGENT` — use migration or `npm run db:ensure-role-agent` / `scripts/ensure-role-agent-enum.ts` (direct DB URL often required for `ALTER TYPE`).
+
+## Admin — Print line tag (order invoice)
+
+- **File:** `apps/admin-web/components/forms/PrintLineTagDialog.tsx`
+- **Redesign (text-only small tag):**
+  - Removed QR entirely (no `qrcode` dependency, no preview image, no iframe image waiting).
+  - Print size set to **36 mm × 30 mm** with **2 mm margin/padding** on all sides.
+  - Content shown (each copy): **We you** → **Order number** → **Item** / **Segment** / **Service** (stacked one per line) → **`current/total`** (e.g. `2 / 6`).
+  - Typography was tuned for thermal readability: larger bold text, then reduced slightly to avoid fully filling the tag.
 
 ## Admin Orders (detail page + invoice)
 

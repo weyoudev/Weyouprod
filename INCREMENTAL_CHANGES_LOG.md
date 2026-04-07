@@ -23,6 +23,8 @@ Use this file to track setup and code changes as you do them. Update the **Statu
 | 17 | Customer PWA + Mobile | Final invoice — remove **Download** | ✅ Done | Order detail → Invoices: no Download CTA on Final invoice; removed HTML/PDF helper code path. Re-export PWA to refresh `customer-pwa/dist`. `apps/customer-mobile/App.tsx` |
 | 18 | API + Admin web | **AGENT** role (branch-scoped staff) | ✅ Done | `AGENT_ROLE` in guards/controllers; branch filter locked for OPS/AGENT; dashboard KPIs/analytics banner behaviour for branch-scoped roles. Enum `AGENT` in DB — run migrate / `db:ensure-role-agent` if needed |
 | 19 | Customer PWA | **Favicon + manifest icons** from Admin Branding **app icon** | ✅ Done | Build: `update-icon-from-branding` + `postexport-pwa.js` into `dist/`. **Runtime (web):** `getPublicBranding()` now returns **`appIconUrl`** (`api.ts`); `App.tsx` updates `link[rel=icon]` / `apple-touch-icon` after branding loads. `EXPO_PUBLIC_API_URL` → **API** (not admin port). See reference MD |
+| 20 | Admin web | **Print line tag** — text-only small tag | ✅ Done | `PrintLineTagDialog.tsx`: removed QR, print size **36×30mm** with **2mm** margins; lines: **We you**, order no, item/segment/service (stacked), qty `current/total`. Typography tuned after print tests. |
+| 21 | Customer app (Mobile + PWA) | Login acceptance copy: remove separate T&C link; rename Privacy Policy link | ✅ Done | `apps/customer-mobile/App.tsx`: checkbox text/link is now **“Terms and conditions & Privacy policy”** (single link opening privacy policy modal); removed separate “Terms and Conditions” link; updated accept-required alert string. |
 
 **Legend:** ⬜ Pending · 🔄 In progress · ✅ Done · ⏭️ Skipped
 
@@ -76,6 +78,10 @@ Use this file to track setup and code changes as you do them. Update the **Statu
 
 - **2026-04-04** — **PWA tab icon not updating (fix):** `getPublicBranding()` in **`apps/customer-mobile/src/api.ts`** was dropping **`appIconUrl`** from the JSON response (only `logoUrl` was mapped), so the client never applied the Admin **App icon**. **Fix:** `PublicBrandingResponse` includes **`appIconUrl`**; response mapping passes it through. **`App.tsx`** (`Platform.OS === 'web'`): `useEffect` sets **`document`** favicon links to **`brandingLogoFullUrl(appIconUrl || logoUrl)`**, updating all **`link[rel="icon"]`** and **`shortcut icon`** (avoids stale bundled `favicon.ico`) plus **`apple-touch-icon`**. Ensures **`expo start --web`** shows the branding app icon after public branding loads; **`EXPO_PUBLIC_API_URL`** must target the **API** host.
 
+- **2026-04-07** — **Admin — Print line tag redesign (small text-only):** `apps/admin-web/components/forms/PrintLineTagDialog.tsx` — removed QR + `qrcode` dependency; print page size **36mm × 30mm** with **2mm** margins; content lines: **We you**, order number, item/segment/service (stacked), quantity `current/total`. Typography iterated after print tests to fit without fully filling the label.
+
+- **2026-04-07** — **Customer login legal copy (mobile + PWA):** `apps/customer-mobile/App.tsx` — removed separate **Terms and Conditions** link from the login acceptance checkbox; renamed the remaining link text from **Privacy Policy** to **Terms and conditions & Privacy policy** (single link; opens the privacy policy modal content). Updated the “accept required” alert message accordingly.
+
 ---
 
 ## Ideas / follow-ups (optional)
@@ -85,4 +91,4 @@ Use this file to track setup and code changes as you do them. Update the **Statu
 
 ---
 
-*Last updated: 2026-04-04 — PWA favicon: build pipeline (row 19) + `appIconUrl` client + web `document` favicon effect; see latest “2026-04-04” bullets.*
+*Last updated: 2026-04-07 — Print line tag redesign (row 20) + customer login legal copy (row 21); see latest “2026-04-07” bullets.*

@@ -946,7 +946,7 @@ export default function App() {
       return;
     }
     if (hasLegalContent && !acceptedTermsAndPrivacy) {
-      const msg = 'Please accept the Terms and Conditions and Privacy Policy to continue.';
+      const msg = 'Please accept the Terms and conditions & Privacy policy to continue.';
       setError(msg);
       Alert.alert('Accept required', msg);
       return;
@@ -1479,12 +1479,18 @@ export default function App() {
                 </View>
                 <Text style={styles.checkboxLabel}>
                   I accept the{' '}
-                  {welcomeBranding?.termsAndConditions?.trim() ? (
-                    <Text style={styles.linkText} onPress={() => setLegalModalContent({ title: 'Terms and Conditions', body: welcomeBranding!.termsAndConditions!.trim() })}>Terms and Conditions</Text>
-                  ) : null}
-                  {welcomeBranding?.termsAndConditions?.trim() && welcomeBranding?.privacyPolicy?.trim() ? ' and ' : null}
                   {welcomeBranding?.privacyPolicy?.trim() ? (
-                    <Text style={styles.linkText} onPress={() => setLegalModalContent({ title: 'Privacy Policy', body: welcomeBranding!.privacyPolicy!.trim() })}>Privacy Policy</Text>
+                    <Text
+                      style={styles.linkText}
+                      onPress={() =>
+                        setLegalModalContent({
+                          title: 'Terms and conditions & Privacy policy',
+                          body: welcomeBranding!.privacyPolicy!.trim(),
+                        })
+                      }
+                    >
+                      Terms and conditions & Privacy policy
+                    </Text>
                   ) : null}
                   .
                 </Text>

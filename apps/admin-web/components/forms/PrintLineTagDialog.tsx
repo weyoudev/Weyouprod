@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import QRCode from 'qrcode';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -14,22 +13,19 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormField } from '@/components/ui/form-field';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 
 /**
- * TSC TE210–class thermal (203 DPI, max print width ~108 mm).
- * Layout sized for common die-cut labels (100 × 50 mm); fits within printer width.
+ * Thermal label: 36 mm × 30 mm page, 2 mm padding on all sides.
+ * Text only — no QR.
  */
-const LABEL_W_MM = 100;
-const LABEL_H_MM = 50;
+const LABEL_W_MM = 36;
+const LABEL_H_MM = 30;
+const LABEL_PADDING_MM = 2;
 
-/** QR module size for sharp print when scaled down on label (~30 mm). */
-const QR_CANVAS_PX = 512;
-const PREVIEW_QR_PX = 220;
+const TAG_TITLE = 'We you';
 
 export interface PrintLineTagPayload {
-  /** Shown top-center on the tag and in the QR payload first line. */
+  /** Legacy field from callers; printed title is fixed to TAG_TITLE. */
   brandName: string;
   orderNumber: string;
   itemName: string;
@@ -44,25 +40,6 @@ interface PrintLineTagDialogProps {
   payload: PrintLineTagPayload | null;
 }
 
-/** Human-readable payload; unique per order + item + segment + service. Scanners show this as text. */
-function buildLineTagQrPayload(
-  brandName: string,
-  orderNumber: string,
-  itemName: string,
-  segment: string,
-  service: string
-): string {
-  const brand = (brandName || 'We You').trim() || 'We You';
-  const lines = [
-    `${brand} · Item tag`,
-    `Order: ${orderNumber.trim()}`,
-    `Item: ${(itemName || '—').trim()}`,
-    `Segment: ${(segment || '—').trim()}`,
-    `Service: ${(service || '—').trim()}`,
-  ];
-  return lines.join('\n');
-}
-
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -71,162 +48,99 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
-async function createQrDataUrl(text: string, widthPx: number = QR_CANVAS_PX): Promise<string> {
-  return QRCode.toDataURL(text, {
-    width: widthPx,
-    margin: 2,
-    errorCorrectionLevel: 'M',
-    color: { dark: '#000000', light: '#ffffff' },
-  });
-}
-
 function buildPrintHtml(
-  brandName: string,
   orderNumber: string,
   itemName: string,
   segment: string,
   service: string,
-  copies: number,
-  labelWmm: number,
-  labelHmm: number,
-  qrDataUrl: string
+  copies: number
 ): string {
-  const brand = escapeHtml((brandName || 'We You').trim() || 'We You');
+  const item = (itemName || '—').trim();
+  const seg = (segment || '—').trim();
+  const svc = (service || '—').trim();
+
   const pages = Array.from({ length: copies }, (_, copyIdx) => {
+    const current = copyIdx + 1;
     return `
     <div class="label-page">
       <div class="label-inner">
-        <div class="label-header">
-          <div class="brand">${brand}</div>
-          <div class="order">${escapeHtml(orderNumber)}</div>
+        <div class="tag-title">${escapeHtml(TAG_TITLE)}</div>
+        <div class="tag-order">${escapeHtml(orderNumber.trim())}</div>
+        <div class="tag-details-stack">
+          <div class="tag-line">${escapeHtml(item)}</div>
+          <div class="tag-line">${escapeHtml(seg)}</div>
+          <div class="tag-line">${escapeHtml(svc)}</div>
         </div>
-        <div class="label-body">
-          <div class="label-main">
-            <div class="item">${escapeHtml(itemName || '—')}</div>
-            <div class="seg-svc"><span class="muted">Segment</span> ${escapeHtml(segment)}</div>
-            <div class="seg-svc"><span class="muted">Service</span> ${escapeHtml(service)}</div>
-          </div>
-          <div class="label-qr">
-            <img src="${qrDataUrl}" width="${QR_CANVAS_PX}" height="${QR_CANVAS_PX}" alt="" />
-          </div>
-        </div>
-        <div class="copy">${copyIdx + 1} / ${copies}</div>
+        <div class="tag-qty">${current} / ${copies}</div>
       </div>
     </div>`;
   }).join('');
 
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Line labels</title>
 <style>
-@page { size: ${labelWmm}mm ${labelHmm}mm; margin: 0; }
+@page { size: ${LABEL_W_MM}mm ${LABEL_H_MM}mm; margin: 0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .label-page {
-  width: ${labelWmm}mm;
-  height: ${labelHmm}mm;
+  width: ${LABEL_W_MM}mm;
+  height: ${LABEL_H_MM}mm;
   page-break-after: always;
-  padding: 2mm 2.5mm;
+  padding: ${LABEL_PADDING_MM}mm;
   font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   color: #111;
 }
 .label-page:last-child { page-break-after: auto; }
 .label-inner {
   height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  border: 0.35mm solid #222;
-  padding: 1.5mm 2mm;
+  gap: 0.3mm;
+  border: 0.25mm solid #333;
+  padding: 0.55mm 0.8mm;
 }
-.label-header {
-  flex-shrink: 0;
-  width: 100%;
-}
-.brand {
-  width: 100%;
-  text-align: left;
-  font-size: 9pt;
-  font-weight: 900;
-  letter-spacing: 0.03em;
-  line-height: 1.15;
-  margin-bottom: 0.6mm;
-  color: #000;
-}
-.label-body {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 2mm;
-  flex: 1;
-  min-height: 0;
-  margin-top: 3.5mm;
-  padding-top: 0.5mm;
-}
-.label-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-}
-.label-qr {
-  flex-shrink: 0;
-  width: 26mm;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.label-qr img {
-  width: 26mm;
-  height: 26mm;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-}
-.order {
-  font-size: 11pt;
+.tag-title {
+  text-align: center;
+  font-size: 9.5pt;
   font-weight: 800;
   letter-spacing: 0.02em;
-  margin-bottom: 0.5mm;
-  line-height: 1.1;
-  word-break: break-all;
-  text-align: left;
-  width: 100%;
+  line-height: 1.02;
+  color: #000;
 }
-.item {
-  font-size: 15pt;
-  font-weight: 900;
-  line-height: 1.08;
-  margin-bottom: 0.5mm;
-  max-height: 14mm;
-  overflow: hidden;
-  text-align: left;
-  width: 100%;
-}
-.seg-svc {
-  font-size: 13pt;
+.tag-order {
+  font-size: 8.25pt;
   font-weight: 700;
-  line-height: 1.2;
-  margin-top: 0.3mm;
-  word-break: break-word;
-  text-align: left;
-  width: 100%;
+  line-height: 1.02;
+  word-break: break-all;
+  text-align: center;
 }
-.seg-svc .muted { color: #222; font-weight: 800; margin-right: 1.2mm; }
-.copy {
-  flex-shrink: 0;
+.tag-details-stack {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.2mm;
+  text-align: center;
+}
+.tag-line {
+  font-size: 9pt;
+  font-weight: 800;
+  line-height: 1.02;
+  word-break: break-word;
+  color: #000;
+}
+.tag-qty {
   margin-top: auto;
-  padding-top: 0.5mm;
-  font-size: 8pt;
-  font-weight: 600;
-  color: #444;
-  text-align: left;
-  width: 100%;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 7.75pt;
+  font-weight: 700;
+  color: #222;
 }
 </style></head><body>${pages}</body></html>`;
 }
@@ -255,16 +169,27 @@ function runPrintJob(html: string): void {
   win.addEventListener('afterprint', cleanup, { once: true });
   setTimeout(cleanup, 120_000);
 
-  win.focus();
-  win.print();
+  const doPrint = () => {
+    win.focus();
+    win.print();
+  };
+
+  void (async () => {
+    try {
+      await new Promise<void>((r) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => r()))
+      );
+      doPrint();
+    } catch {
+      doPrint();
+    }
+  })();
 }
 
 export function PrintLineTagDialog({ open, onOpenChange, payload }: PrintLineTagDialogProps) {
   const [copies, setCopies] = useState(1);
   const [copiesDraft, setCopiesDraft] = useState('1');
   const [printLoading, setPrintLoading] = useState(false);
-  const [previewQrUrl, setPreviewQrUrl] = useState<string | null>(null);
-  const [previewQrLoading, setPreviewQrLoading] = useState(false);
 
   useEffect(() => {
     if (!open || !payload) return;
@@ -273,65 +198,24 @@ export function PrintLineTagDialog({ open, onOpenChange, payload }: PrintLineTag
     setCopiesDraft(String(c));
   }, [open, payload]);
 
-  useEffect(() => {
-    if (!open || !payload) {
-      setPreviewQrUrl(null);
-      return;
-    }
-    let cancelled = false;
-    setPreviewQrLoading(true);
-    const text = buildLineTagQrPayload(
-      payload.brandName,
-      payload.orderNumber,
-      payload.itemName,
-      payload.segment,
-      payload.service
-    );
-    void createQrDataUrl(text, PREVIEW_QR_PX)
-      .then((url) => {
-        if (!cancelled) setPreviewQrUrl(url);
-      })
-      .catch(() => {
-        if (!cancelled) setPreviewQrUrl(null);
-      })
-      .finally(() => {
-        if (!cancelled) setPreviewQrLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, payload]);
-
-  const handlePrint = useCallback(async () => {
+  const handlePrint = useCallback(() => {
     if (!payload) return;
     const parsed = parseInt(copiesDraft, 10);
     const n = Math.max(1, Math.min(999, Number.isFinite(parsed) ? parsed : copies));
     setPrintLoading(true);
     try {
-      const qrText = buildLineTagQrPayload(
-        payload.brandName,
-        payload.orderNumber,
-        payload.itemName,
-        payload.segment,
-        payload.service
-      );
-      const qrDataUrl = await createQrDataUrl(qrText);
       const html = buildPrintHtml(
-        payload.brandName,
         payload.orderNumber,
         payload.itemName,
         payload.segment,
         payload.service,
-        n,
-        LABEL_W_MM,
-        LABEL_H_MM,
-        qrDataUrl
+        n
       );
       runPrintJob(html);
       onOpenChange(false);
     } catch (e) {
       console.error(e);
-      toast.error('Could not build label or QR code. Try again.');
+      toast.error('Could not build label. Try again.');
     } finally {
       setPrintLoading(false);
     }
@@ -341,60 +225,35 @@ export function PrintLineTagDialog({ open, onOpenChange, payload }: PrintLineTag
     return null;
   }
 
+  const previewItem = (payload.itemName || '—').trim();
+  const previewSegment = (payload.segment || '—').trim();
+  const previewService = (payload.service || '—').trim();
+
+  const previewTotal = Math.max(1, parseInt(copiesDraft, 10) || copies || 1);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Print line tag</DialogTitle>
           <DialogDescription className="sr-only">
-            Preview matches the printed label. Same QR encodes order, item, segment, and service.
+            Preview matches the printed label. 36 by 30 millimetres with two millimetre margins.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 text-sm">
-          <div className="rounded-md border bg-muted/30 p-3">
-            <p className="text-center font-bold text-base border-b border-border pb-2 mb-3">
-              {payload.brandName}
-            </p>
-            <div className="mt-2 flex flex-row items-center gap-3">
-              <div className="min-w-0 flex-1 space-y-1.5 text-left">
-                <p>
-                  <span className="text-muted-foreground">Order</span>{' '}
-                  <span className="font-mono font-semibold break-all">{payload.orderNumber}</span>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Item</span>{' '}
-                  <span className="font-semibold">{payload.itemName || '—'}</span>
-                </p>
-                <p className="text-base font-bold leading-snug">
-                  <span className="text-muted-foreground font-semibold">Segment</span>{' '}
-                  <span>{payload.segment}</span>
-                </p>
-                <p className="text-base font-bold leading-snug">
-                  <span className="text-muted-foreground font-semibold">Service</span>{' '}
-                  <span>{payload.service}</span>
-                </p>
+          <div className="mx-auto w-full max-w-[280px] rounded-md border bg-muted/30 p-3">
+            <div className="flex aspect-[36/30] max-h-[260px] w-full flex-col items-stretch justify-between gap-1 border border-border bg-background px-2 py-2.5 text-center leading-tight">
+              <p className="text-xs font-extrabold">{TAG_TITLE}</p>
+              <p className="font-mono text-[11px] font-bold break-all">{payload.orderNumber}</p>
+              <div className="flex min-h-0 flex-1 flex-col justify-center gap-1 py-0.5">
+                <p className="text-xs font-extrabold text-foreground">{previewItem}</p>
+                <p className="text-xs font-extrabold text-foreground">{previewSegment}</p>
+                <p className="text-xs font-extrabold text-foreground">{previewService}</p>
               </div>
-              <div
-                className={cn(
-                  'flex h-[104px] w-[104px] shrink-0 items-center justify-center rounded-md border bg-white p-1',
-                  previewQrLoading && 'border-dashed'
-                )}
-              >
-                {previewQrLoading && <Skeleton className="h-full w-full rounded" />}
-                {!previewQrLoading && previewQrUrl && (
-                  <img
-                    src={previewQrUrl}
-                    alt=""
-                    width={PREVIEW_QR_PX}
-                    height={PREVIEW_QR_PX}
-                    className="h-full w-full object-contain"
-                  />
-                )}
-                {!previewQrLoading && !previewQrUrl && (
-                  <span className="px-1 text-center text-[10px] text-muted-foreground">QR unavailable</span>
-                )}
-              </div>
+              <p className="text-[11px] font-bold text-muted-foreground">
+                1 / {previewTotal}
+              </p>
             </div>
           </div>
 
@@ -428,7 +287,7 @@ export function PrintLineTagDialog({ open, onOpenChange, payload }: PrintLineTag
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={printLoading}>
             Cancel
           </Button>
-          <Button type="button" onClick={() => void handlePrint()} disabled={printLoading}>
+          <Button type="button" onClick={() => handlePrint()} disabled={printLoading}>
             {printLoading ? 'Preparing…' : 'Print tags'}
           </Button>
         </DialogFooter>

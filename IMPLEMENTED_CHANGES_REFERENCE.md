@@ -1,6 +1,6 @@
 # Implemented Changes Reference
 
-Date: 2026-03-30 (updated 2026-04-05)  
+Date: 2026-03-30 (updated 2026-04-07)  
 Project: Weyouprod monorepo
 
 ## Customer app (PWA + Mobile)
@@ -20,8 +20,8 @@ Project: Weyouprod monorepo
 - **Book Now — Select services:** Added **Home linen** as the sixth service tile (`HOME_LINEN`), after Steam Iron, in `apps/customer-mobile/src/types.ts` (`SERVICE_TYPES` + `ServiceTypeId`). Applies to **native** and **customer PWA** (PWA imports `../customer-mobile/App`).
 
 - **Add / Edit address — Google Maps (`App.tsx`):**
-  - **PWA (web):** Hides **“Search location on Google Maps”** / **“Open Google Maps to search”** (`hideGoogleMapsSearchRow`). Optional **Google Maps link** text field remains for paste; **not required** on save (`Platform.OS === 'web'`). Empty `googleMapUrl` sent as `null`.
-  - **All platforms:** Removed the **“Use Google Maps link”** button under the form; only the optional URL input remains (less confusing). Native still has the top **Open Google Maps to search** flow and map modal **Add to Address** for auto-fill.
+  - **PWA (web):** Hides **"Search location on Google Maps"** / **"Open Google Maps to search"** (`hideGoogleMapsSearchRow`). Optional **Google Maps link** text field remains for paste; **not required** on save (`Platform.OS === 'web'`). Empty `googleMapUrl` sent as `null`.
+  - **All platforms:** Removed the **"Use Google Maps link"** button under the form; only the optional URL input remains (less confusing). Native still has the top **Open Google Maps to search** flow and map modal **Add to Address** for auto-fill.
 
 - Updated customer order confirmation/details UI to highlight key info for readability:
   - Date format like `01 APRIL 2026`
@@ -52,7 +52,68 @@ Project: Weyouprod monorepo
 - **File:** `apps/customer-mobile/App.tsx`
 - Removed the separate **Terms and Conditions** link in the login acceptance checkbox.
 - Renamed the remaining link label from **Privacy Policy** to **Terms and conditions & Privacy policy** (single link; opens the privacy policy modal content).
-- Updated the “accept required” alert string shown when the user tries to request OTP without accepting.
+- Updated the "accept required" alert string shown when the user tries to request OTP without accepting.
+
+## Customer mobile — login UI rebuild
+
+- **File:** `apps/customer-mobile/App.tsx`
+- Rebuilt the `step === 'phone'` login screen from scratch with dedicated styles (`phoneAuthRoot`, `phoneAuthBody`, `phoneAuthCard`, `phoneAuthLogoWrap`, etc.).
+- Fixed persistent layout collapse caused by a parent `View` missing `flex: 1`.
+- Light pink card encloses elements up to the "Send OTP" button; Krackbot credit line positioned below the card.
+- Proper spacing, padding, and logo placement matching the approved design.
+
+## Customer mobile — push notifications
+
+- **Files:** `apps/customer-mobile/App.tsx`, `apps/customer-mobile/app.json`
+- **Foreground handler:** `Notifications.setNotificationHandler` shows alerts/badges/sound while the app is open.
+- **Android notification channel:** Created `default` channel on app startup for Android 8+.
+- **Tap listener:** `addNotificationResponseReceivedListener` navigates to order detail when user taps a push notification.
+- **Expo config:** Added `expo-notifications` plugin with icon and magenta accent colour (`#c2185b`); `projectId` in `extra.eas`.
+
+## Backend — push notifications for order lifecycle
+
+- **Files:** `apps/api/src/api/orders/orders.service.ts`, `apps/api/src/api/admin/services/admin-payments.service.ts`
+- **Booking confirmed:** `sendExpoPush` after `createOrder` — "Your booking is confirmed!".
+- **Order status transitions:** `sendExpoPush` after `updateOrderStatus` for Picked up, In progress, Ready, Out for delivery, Delivered, Cancelled — each with contextual message.
+- **Payment captured:** `sendExpoPush` when payment status is `CAPTURED` — "Payment received! Thank you."
+- Injected `CustomersRepo` into both services to look up customer push tokens.
+
+## Customer mobile — version bump & EAS config
+
+- **Files:** `apps/customer-mobile/app.json`, `apps/customer-mobile/eas.json`
+- Version bumped to **1.0.4** (`android.versionCode: 5`) for Google Play Console submission.
+- `EXPO_PUBLIC_API_URL` set to `https://api.weyouthelaundryman.com/api` in both `preview` and `production` EAS build profiles.
+- Updated app icons (adaptive-icon, favicon, icon, splash-icon).
+
+## Admin — Add items to invoice dialog
+
+- **File:** `apps/admin-web/components/forms/AddItemsToInvoiceDialog.tsx`
+- Item name now displayed **below the icon** in each item card within the "Add items to invoice" pop-up.
+- Card layout: `flex-col`, icon in a fixed `w-14 h-14` frame at top, name as `text-xs font-semibold` with `line-clamp-2` below.
+- Minimum card height (`min-h-[110px]`) ensures consistent grid appearance.
+
+## Admin — Dashboard new-order alerts
+
+- **File:** `apps/admin-web/app/(protected)/dashboard/page.tsx`
+- **Sound alert:** Custom Web Audio API chime (`playNewOrderAlert`) — 10-second gentle wind-chime melody using sine waves (C-E-G-C pattern, louder volume).
+- **Persistent toast:** On each new order, a `sonner` toast appears at **bottom-right** with:
+  - Customer name, pickup date and time.
+  - `duration: Infinity` — must be closed manually by the user.
+  - **"→ View"** action button in **magenta** (`#c2185b`) that opens the order detail pop-up (`setPreviewOrderId`).
+  - Light pink background (`#fce4ec`) with pink border.
+- **File:** `apps/admin-web/app/providers.tsx` — added `closeButton` to the global `<Toaster>`.
+
+## Admin — AGENT role sidebar & dashboard restrictions
+
+- **File:** `apps/admin-web/lib/permissions.ts`
+  - Removed `/walk-in-orders`, `/orders`, `/customers` from AGENT `allow` list (walk-in access fully removed).
+  - Added `navHide: ['/orders', '/customers']` — these items hidden from sidebar navigation for AGENTs.
+  - New `isNavHidden(role, pathname)` function checks the `navHide` list.
+  - AGENT can still access `/orders/[id]` detail pages (allowed by route prefix matching).
+- **File:** `apps/admin-web/components/layout/Sidebar.tsx`
+  - Sidebar filters nav items using both `canAccessRoute` and `!isNavHidden`.
+- **File:** `apps/admin-web/app/(protected)/dashboard/page.tsx`
+  - KPI cards section wrapped with `{!isAgent && (...)}` to hide for AGENT role.
 
 ## Admin Catalog
 
@@ -196,4 +257,3 @@ Project: Weyouprod monorepo
 - All implemented changes were lint-checked on touched files during implementation.
 - This file is intended as a practical future reference for what was changed in this cycle.
 - **Changelog-style steps** (setup checklist + dated bullets): see `INCREMENTAL_CHANGES_LOG.md`.
-

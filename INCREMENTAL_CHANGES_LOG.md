@@ -14,17 +14,24 @@ Use this file to track setup and code changes as you do them. Update the **Statu
 | 8 | Customer PWA / Mobile | Set `EXPO_PUBLIC_API_URL` to local API (e.g. `http://localhost:3009`) | ⬜ Pending | No leading space in `.env` |
 | 9 | Customer PWA / Mobile | Set `EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY` for new project | ⬜ Pending | |
 | 10 | Root / monorepo | Trim duplicate or obsolete entries in root `.env` if any | ✅ Done | Removed stray JSON block; dev-only placeholders. See `docs/DEV_SUPABASE_ENV.md` |
-| 11 | Docploy / deploy | For PWA Docker: pass `EXPO_PUBLIC_API_URL` as **build-arg**, rebuild no-cache | ⬜ Pending | Runtime-only env won’t change baked bundle |
+| 11 | Docploy / deploy | For PWA Docker: pass `EXPO_PUBLIC_API_URL` as **build-arg**, rebuild no-cache | ⬜ Pending | Runtime-only env won't change baked bundle |
 | 12 | Security | Ensure `.env` files stay gitignored; use `.env.example` with placeholders only | ✅ Done | Root `.gitignore` expanded (keys, credentials, Sentry, Terraform state, Playwright, local DBs, Supabase CLI temp, `.direnv/`); `apps/customer-mobile/.gitignore` aligned (`.env`, `credentials.json`) |
 | 13 | API / Supabase | Storage bucket `assets` + one-shot create script | ✅ Done | `SUPABASE_STORAGE_BUCKET` defaults to `assets` when URL + service role set; `npm run supabase:ensure-assets-bucket`; see `docs/DEV_SUPABASE_ENV.md` §6 |
 | 14 | Customer PWA + Mobile | Book Now → **Home linen** as 6th service tile | ✅ Done | `HOME_LINEN` in `apps/customer-mobile/src/types.ts`; PWA reuses `customer-mobile/App` |
-| 15 | Customer PWA + Mobile | Add/Edit address — Google Maps UX | ✅ Done | PWA: hide “Open Google Maps to search”; optional Maps URL field only; URL not required on save (web). Removed **Use Google Maps link** button (all platforms). `apps/customer-mobile/App.tsx` |
+| 15 | Customer PWA + Mobile | Add/Edit address — Google Maps UX | ✅ Done | PWA: hide "Open Google Maps to search"; optional Maps URL field only; URL not required on save (web). Removed **Use Google Maps link** button (all platforms). `apps/customer-mobile/App.tsx` |
 | 16 | Admin web + API | **Orders** list: search + filter cleanup | ✅ Done | Search (debounced) on order id, customer name, phone; removed Status / Service / Pincode UI; `GET /admin/orders?search=…`. See `IMPLEMENTED_CHANGES_REFERENCE.md` |
 | 17 | Customer PWA + Mobile | Final invoice — remove **Download** | ✅ Done | Order detail → Invoices: no Download CTA on Final invoice; removed HTML/PDF helper code path. Re-export PWA to refresh `customer-pwa/dist`. `apps/customer-mobile/App.tsx` |
 | 18 | API + Admin web | **AGENT** role (branch-scoped staff) | ✅ Done | `AGENT_ROLE` in guards/controllers; branch filter locked for OPS/AGENT; dashboard KPIs/analytics banner behaviour for branch-scoped roles. Enum `AGENT` in DB — run migrate / `db:ensure-role-agent` if needed |
 | 19 | Customer PWA | **Favicon + manifest icons** from Admin Branding **app icon** | ✅ Done | Build: `update-icon-from-branding` + `postexport-pwa.js` into `dist/`. **Runtime (web):** `getPublicBranding()` now returns **`appIconUrl`** (`api.ts`); `App.tsx` updates `link[rel=icon]` / `apple-touch-icon` after branding loads. `EXPO_PUBLIC_API_URL` → **API** (not admin port). See reference MD |
 | 20 | Admin web | **Print line tag** — text-only small tag | ✅ Done | `PrintLineTagDialog.tsx`: removed QR, print size **36×30mm** with **2mm** margins; lines: **We you**, customer name, order no, item/service (stacked), qty `current/total`. Order number size reduced to fit width; segment line removed. |
-| 21 | Customer app (Mobile + PWA) | Login acceptance copy: remove separate T&C link; rename Privacy Policy link | ✅ Done | `apps/customer-mobile/App.tsx`: checkbox text/link is now **“Terms and conditions & Privacy policy”** (single link opening privacy policy modal); removed separate “Terms and Conditions” link; updated accept-required alert string. |
+| 21 | Customer app (Mobile + PWA) | Login acceptance copy: remove separate T&C link; rename Privacy Policy link | ✅ Done | `apps/customer-mobile/App.tsx`: checkbox text/link is now **"Terms and conditions & Privacy policy"** (single link opening privacy policy modal); removed separate "Terms and Conditions" link; updated accept-required alert string. |
+| 22 | Customer mobile | **Login UI rebuild** | ✅ Done | Rebuilt `step === 'phone'` screen with dedicated styles; fixed parent View missing `flex: 1`; light pink card up to Send OTP; Krackbot credit below card. |
+| 23 | Customer mobile | **Push notifications** (client-side) | ✅ Done | Foreground handler, Android notification channel, tap listener → order detail navigation. Expo config: `expo-notifications` plugin with icon + colour. |
+| 24 | API (backend) | **Push notifications** for order lifecycle | ✅ Done | `sendExpoPush` on booking confirmed, all status transitions (Picked up/In progress/Ready/Out for delivery/Delivered/Cancelled), and payment `CAPTURED`. `CustomersRepo` injected for push tokens. |
+| 25 | Customer mobile | **Version bump + EAS config** | ✅ Done | v1.0.4, `versionCode: 5`; live API URL in preview + production EAS profiles; updated app icons. |
+| 26 | Admin web | **Add items to invoice** — show item name below icon | ✅ Done | `AddItemsToInvoiceDialog.tsx`: `flex-col` card layout, fixed icon frame, `line-clamp-2` name, `min-h-[110px]`. |
+| 27 | Admin web | **Dashboard new-order alerts** — sound + persistent toast | ✅ Done | Web Audio 10s chime; `sonner` toast per new order (customer name, pickup date/time, `duration: Infinity`, magenta "→ View" button, light pink bg). Global `<Toaster>` close button enabled. |
+| 28 | Admin web | **AGENT role** — sidebar & dashboard restrictions | ✅ Done | Removed Walk-in/Orders/Customers from AGENT sidebar; `navHide` + `isNavHidden()` in `permissions.ts`; KPI cards hidden for AGENT; order detail pages still accessible via direct URL. |
 
 **Legend:** ⬜ Pending · 🔄 In progress · ✅ Done · ⏭️ Skipped
 
@@ -44,7 +51,7 @@ Use this file to track setup and code changes as you do them. Update the **Statu
 
 - **2026-04-03** — **Select services:** Added sixth tile **Home linen** (`HOME_LINEN`) on the Book Now flow for **customer mobile** and **customer PWA** (shared `apps/customer-mobile` UI). Placed after Steam Iron in the 2-column grid.
 
-- **2026-04-03** — **Add / Edit address (Google Maps):** On **customer PWA** (`Platform.OS === 'web'`), removed the in-app **“Open Google Maps to search”** row so map search/popup is not the primary flow. Kept **Google Maps link (optional)** for manual paste; link is **not mandatory** on save for web; `googleMapUrl` stored when provided. Removed the **“Use Google Maps link”** button under the form (was confusing)—**URL field only**; native users still use **Open Google Maps to search** + modal **Add to Address** to auto-fill. Implemented in `apps/customer-mobile/App.tsx`.
+- **2026-04-03** — **Add / Edit address (Google Maps):** On **customer PWA** (`Platform.OS === 'web'`), removed the in-app **"Open Google Maps to search"** row so map search/popup is not the primary flow. Kept **Google Maps link (optional)** for manual paste; link is **not mandatory** on save for web; `googleMapUrl` stored when provided. Removed the **"Use Google Maps link"** button under the form (was confusing)—**URL field only**; native users still use **Open Google Maps to search** + modal **Add to Address** to auto-fill. Implemented in `apps/customer-mobile/App.tsx`.
 
 - **2026-04-04** — **Customer Home (mobile + PWA):** Removed carousel pagination dots; merged carousel, welcome card, and active orders into one vertical `ScrollView` with `nestedScrollEnabled`; tightened spacing. PWA uses the same `apps/customer-mobile/App.tsx`.
 
@@ -52,7 +59,7 @@ Use this file to track setup and code changes as you do them. Update the **Statu
 
 - **2026-04-04** — **Admin sidebar:** Grouped nav with dividers (Dashboard/Orders/Walk-in/Customers → Final invoices/Subscriptions → catalog block → admin/analytics/feedback); removed API/DB/user status and Invalidate cache; Logout directly under Feedback inside scroll; sidebar `fixed` + main `md:pl-56` / `md:pl-14` in `ProtectedLayout.tsx`. Files: `Sidebar.tsx`, `ProtectedLayout.tsx`.
 
-- **2026-04-04** — **Admin order detail — invoices & header:** Service types shown as chips beside order title; removed “Service: …” from Ack/Final invoice cards and `InvoicePrintView`. **Pickup** banner under title: `DD Month YYYY` + 24h window (`formatPickupDayDisplay`, `formatTimeWindow24h` in `lib/format.ts`); walk-in shows “Walk order”; removed duplicate pickup lines from invoice blocks. **Order details** label **bold**. Right column: **branding `businessName`** bold above PAN/GST (Ack, Final, `InvoicePrintView`). **Cancelled** timeline: third step after Picked up with `cancelledAt` / `updatedAt`; pill `bg-destructive text-white`. **Cancelled orders:** `InvoiceBuilder` `disableEditing` — read-only lines, disabled Add items / tax / discount, **comments** non-editable (`disabled` + guard + muted styling). Files: `orders/[id]/page.tsx`, `InvoicePrintView.tsx`, `InvoiceBuilder.tsx`.
+- **2026-04-04** — **Admin order detail — invoices & header:** Service types shown as chips beside order title; removed "Service: …" from Ack/Final invoice cards and `InvoicePrintView`. **Pickup** banner under title: `DD Month YYYY` + 24h window (`formatPickupDayDisplay`, `formatTimeWindow24h` in `lib/format.ts`); walk-in shows "Walk order"; removed duplicate pickup lines from invoice blocks. **Order details** label **bold**. Right column: **branding `businessName`** bold above PAN/GST (Ack, Final, `InvoicePrintView`). **Cancelled** timeline: third step after Picked up with `cancelledAt` / `updatedAt`; pill `bg-destructive text-white`. **Cancelled orders:** `InvoiceBuilder` `disableEditing` — read-only lines, disabled Add items / tax / discount, **comments** non-editable (`disabled` + guard + muted styling). Files: `orders/[id]/page.tsx`, `InvoicePrintView.tsx`, `InvoiceBuilder.tsx`.
 
 - **2026-04-04** — **Add items to invoice dialog:** Search field; quantity draft supports decimals, min **0.1**, default 1, text `inputMode="decimal"`. **InvoiceBuilder** matrix row qty min **0.1** with `step="any"`. Files: `AddItemsToInvoiceDialog.tsx`, `InvoiceBuilder.tsx`.
 
@@ -80,7 +87,21 @@ Use this file to track setup and code changes as you do them. Update the **Statu
 
 - **2026-04-07** — **Admin — Print line tag redesign (small text-only):** `apps/admin-web/components/forms/PrintLineTagDialog.tsx` — removed QR + `qrcode` dependency; print page size **36mm × 30mm** with **2mm** margins. Final content lines: **We you**, **customer name**, **order number**, **item**, **service**, and quantity `current/total` (segment removed). Typography iterated after print tests; order-number text reduced to fit width.
 
-- **2026-04-07** — **Customer login legal copy (mobile + PWA):** `apps/customer-mobile/App.tsx` — removed separate **Terms and Conditions** link from the login acceptance checkbox; renamed the remaining link text from **Privacy Policy** to **Terms and conditions & Privacy policy** (single link; opens the privacy policy modal content). Updated the “accept required” alert message accordingly.
+- **2026-04-07** — **Customer login legal copy (mobile + PWA):** `apps/customer-mobile/App.tsx` — removed separate **Terms and Conditions** link from the login acceptance checkbox; renamed the remaining link text from **Privacy Policy** to **Terms and conditions & Privacy policy** (single link; opens the privacy policy modal content). Updated the "accept required" alert message accordingly.
+
+- **2026-04-07** — **Customer mobile — login UI rebuild:** `apps/customer-mobile/App.tsx` — rebuilt the `step === 'phone'` login screen with new dedicated styles (`phoneAuthRoot`, `phoneAuthBody`, `phoneAuthCard`, etc.). Fixed parent `View` missing `flex: 1` that caused layout collapse. Light pink card encloses up to Send OTP; Krackbot credit below card.
+
+- **2026-04-07** — **Customer mobile — push notifications:** `apps/customer-mobile/App.tsx` + `app.json` — added `Notifications.setNotificationHandler` for foreground alerts, Android `default` notification channel, tap listener navigating to order detail. Expo config: `expo-notifications` plugin with icon/colour; `projectId` in `extra.eas`.
+
+- **2026-04-07** — **Backend — push notifications for order lifecycle:** `apps/api/src/api/orders/orders.service.ts` — `sendExpoPush` on booking confirmed + all status transitions (Picked up, In progress, Ready, Out for delivery, Delivered, Cancelled). `apps/api/src/api/admin/services/admin-payments.service.ts` — `sendExpoPush` on payment `CAPTURED`. Both services inject `CustomersRepo` for push token lookup.
+
+- **2026-04-07** — **Customer mobile — version bump + EAS config:** `app.json` → v1.0.4, `versionCode: 5`. `eas.json` → `EXPO_PUBLIC_API_URL` set to `https://api.weyouthelaundryman.com/api` in preview + production profiles. Updated app icons (adaptive-icon, favicon, icon, splash-icon).
+
+- **2026-04-07** — **Admin — Add items to invoice dialog:** `AddItemsToInvoiceDialog.tsx` — item name displayed below icon in each card; `flex-col` card layout, fixed icon frame (`w-14 h-14`), `line-clamp-2` name, `min-h-[110px]` card.
+
+- **2026-04-07** — **Admin — Dashboard new-order alerts:** `dashboard/page.tsx` — Web Audio API `playNewOrderAlert` (10s wind-chime melody, louder volume). `sonner` toast per new order: customer name, pickup date/time, `duration: Infinity`, magenta "→ View" button opening order detail, light pink background. `providers.tsx` — added `closeButton` to global `<Toaster>`.
+
+- **2026-04-07** — **Admin — AGENT role sidebar & dashboard restrictions:** `lib/permissions.ts` — removed `/walk-in-orders`, `/orders`, `/customers` from AGENT allow list; added `navHide` for `/orders` + `/customers`; new `isNavHidden()` function. `Sidebar.tsx` — filters nav items using both `canAccessRoute` and `!isNavHidden`. `dashboard/page.tsx` — KPI cards hidden for AGENT role (`{!isAgent && (...)}`). AGENT can still view order detail pages via direct URL (e.g. redirected from dashboard toast "→ View" button).
 
 ---
 
@@ -91,4 +112,4 @@ Use this file to track setup and code changes as you do them. Update the **Statu
 
 ---
 
-*Last updated: 2026-04-07 — Print line tag redesign (row 20) + customer login legal copy (row 21); see latest “2026-04-07” bullets.*
+*Last updated: 2026-04-07 — Push notifications (client + backend), admin new-order alerts, AGENT role sidebar/dashboard restrictions, mobile login rebuild, version bump to 1.0.4, add-items item name display.*

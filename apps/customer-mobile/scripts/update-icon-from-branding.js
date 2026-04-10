@@ -5,6 +5,10 @@
  * https://weyouapi.krackbot.com/api or http://192.168.x.x:3009
  * Ensure a logo is uploaded in admin branding first.
  *
+ * Android adaptive foreground (`adaptive-icon.png`): logo is scaled to fit the 66dp keyline on a
+ * 108dp layer (Google guideline), centered on a 1024×1024 white canvas — avoids circular launcher
+ * clipping. Uses `sharp` (devDependency); on failure falls back to the raw logo for adaptive-icon.
+ *
  * When branding fetch or logo download fails (e.g. API down or cold start), the script
  * exits 0 so the build continues using existing assets. Set SKIP_ICON_UPDATE=1 to skip the update entirely.
  */
@@ -38,6 +42,33 @@ function softFail(message) {
   console.error(message);
   console.warn('(Build will continue using existing icon assets.)');
   process.exit(0);
+}
+
+/** Android adaptive icon: fit logo inside 66dp keyline on 108dp canvas (Google guideline). */
+async function buildAdaptiveForegroundPng(logoBuffer) {
+  const sharp = require('sharp');
+  const CANVAS = 1024;
+  const maxSide = Math.floor(CANVAS * (66 / 108));
+  const resizedBuf = await sharp(logoBuffer)
+    .resize(maxSide, maxSide, { fit: 'inside', withoutEnlargement: true })
+    .png()
+    .toBuffer();
+  const outMeta = await sharp(resizedBuf).metadata();
+  const newW = outMeta.width || maxSide;
+  const newH = outMeta.height || maxSide;
+  const left = Math.floor((CANVAS - newW) / 2);
+  const top = Math.floor((CANVAS - newH) / 2);
+  return sharp({
+    create: {
+      width: CANVAS,
+      height: CANVAS,
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+    },
+  })
+    .composite([{ input: resizedBuf, left, top }])
+    .png()
+    .toBuffer();
 }
 
 async function main() {
@@ -107,9 +138,17 @@ async function main() {
   const splashPath = path.join(assetsDir, 'splash-icon.png');
   const faviconPath = path.join(assetsDir, 'favicon.png');
   fs.writeFileSync(iconPath, buf);
-  fs.writeFileSync(adaptivePath, buf);
   fs.writeFileSync(splashPath, buf);
   fs.writeFileSync(faviconPath, buf);
+  try {
+    const adaptiveBuf = await buildAdaptiveForegroundPng(buf);
+    fs.writeFileSync(adaptivePath, adaptiveBuf);
+    console.log('Wrote adaptive-icon.png with Android 66/108 keyline inset (white canvas).');
+  } catch (e) {
+    console.warn('Could not build padded adaptive-icon (sharp):', e.message);
+    console.warn('Falling back to raw logo for adaptive-icon.png.');
+    fs.writeFileSync(adaptivePath, buf);
+  }
   console.log('Updated icon, adaptive-icon, splash-icon, and favicon from branding (appIconUrl, else logoUrl).');
   console.log('APK/IPA and app launcher icon will use this logo. Rebuild the app (or run a new EAS build) to see it.');
 }

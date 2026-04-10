@@ -32,6 +32,7 @@ Use this file to track setup and code changes as you do them. Update the **Statu
 | 26 | Admin web | **Add items to invoice** — show item name below icon | ✅ Done | `AddItemsToInvoiceDialog.tsx`: `flex-col` card layout, fixed icon frame, `line-clamp-2` name, `min-h-[110px]`. |
 | 27 | Admin web | **Dashboard new-order alerts** — sound + persistent toast | ✅ Done | Web Audio 10s chime; `sonner` toast per new order (customer name, pickup date/time, `duration: Infinity`, magenta "→ View" button, light pink bg). Global `<Toaster>` close button enabled. |
 | 28 | Admin web | **AGENT role** — sidebar & dashboard restrictions | ✅ Done | Removed Walk-in/Orders/Customers from AGENT sidebar; `navHide` + `isNavHidden()` in `permissions.ts`; KPI cards hidden for AGENT; order detail pages still accessible via direct URL. |
+| 29 | Customer mobile | **Android adaptive icon** — keyline inset + v1.0.5 | ✅ Done | `update-icon-from-branding.js` + `sharp`: 1024px white canvas, logo fits 66/108 safe zone; `app.json` v1.0.5 / `versionCode: 6`. |
 
 **Legend:** ⬜ Pending · 🔄 In progress · ✅ Done · ⏭️ Skipped
 
@@ -103,6 +104,8 @@ Use this file to track setup and code changes as you do them. Update the **Statu
 
 - **2026-04-07** — **Admin — AGENT role sidebar & dashboard restrictions:** `lib/permissions.ts` — removed `/walk-in-orders`, `/orders`, `/customers` from AGENT allow list; added `navHide` for `/orders` + `/customers`; new `isNavHidden()` function. `Sidebar.tsx` — filters nav items using both `canAccessRoute` and `!isNavHidden`. `dashboard/page.tsx` — KPI cards hidden for AGENT role (`{!isAgent && (...)}`). AGENT can still view order detail pages via direct URL (e.g. redirected from dashboard toast "→ View" button).
 
+- **2026-04-10** — **Android adaptive launcher icon:** `apps/customer-mobile/scripts/update-icon-from-branding.js` — after branding download, builds `adaptive-icon.png` as 1024×1024 white canvas with logo scaled to Android **66/108** keyline (`sharp` devDependency); fallback to raw logo if sharp fails. Regenerated committed asset. **`app.json`:** version **1.0.5**, **`versionCode: 6`** for new Play build (OTA does not update launcher icons).
+
 ---
 
 ## Ideas / follow-ups (optional)
@@ -112,4 +115,4 @@ Use this file to track setup and code changes as you do them. Update the **Statu
 
 ---
 
-*Last updated: 2026-04-07 — Push notifications (client + backend), admin new-order alerts, AGENT role sidebar/dashboard restrictions, mobile login rebuild, version bump to 1.0.4, add-items item name display.*
+*Last updated: 2026-04-10 — Android adaptive icon keyline inset (`sharp`), customer-mobile v1.0.5 / versionCode 6; see row 29 and 2026-04-10 bullet.*

@@ -1,6 +1,6 @@
 # Implemented Changes Reference
 
-Date: 2026-03-30 (updated 2026-04-07)  
+Date: 2026-03-30 (updated 2026-04-10)  
 Project: Weyouprod monorepo
 
 ## Customer app (PWA + Mobile)
@@ -81,9 +81,15 @@ Project: Weyouprod monorepo
 ## Customer mobile — version bump & EAS config
 
 - **Files:** `apps/customer-mobile/app.json`, `apps/customer-mobile/eas.json`
-- Version bumped to **1.0.4** (`android.versionCode: 5`) for Google Play Console submission.
+- Current store-facing version: **1.0.5** (`android.versionCode: 6`) after adaptive-icon fix; earlier **1.0.4** / `versionCode: 5` documented in history.
 - `EXPO_PUBLIC_API_URL` set to `https://api.weyouthelaundryman.com/api` in both `preview` and `production` EAS build profiles.
 - Updated app icons (adaptive-icon, favicon, icon, splash-icon).
+
+## Customer mobile — Android adaptive launcher icon (safe zone)
+
+- **Problem:** Raw branding artwork was copied to `adaptive-icon.png`, so on circular Android launchers the logo was clipped at the edges.
+- **Files:** `apps/customer-mobile/scripts/update-icon-from-branding.js`, `apps/customer-mobile/package.json` (`sharp` devDependency), `assets/adaptive-icon.png`.
+- **Behaviour:** After downloading the logo, the script builds a **1024×1024** PNG with **white** background (matches `app.json` `android.adaptiveIcon.backgroundColor`), scales the logo with **`fit: inside`** so it fits the **66/108** keyline box (`floor(1024 × 66/108)` px), and **centers** it. `icon.png`, `splash-icon.png`, and `favicon.png` remain the full-resolution branding image. If `sharp` fails, the script falls back to writing the raw buffer to `adaptive-icon.png` and logs a warning.
 
 ## Admin — Add items to invoice dialog
 

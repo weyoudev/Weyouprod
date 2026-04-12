@@ -8,19 +8,17 @@ The Dockerfile has been updated to automatically run Prisma database migrations 
 
 ### 1. Updated `apps/api/Dockerfile`
 
-**Added:**
-- Copy Prisma schema and migrations directory to production container (line 48-49)
-- Modified CMD to run `prisma migrate deploy` before starting the API (line 61-62)
+**Added (lines 35-37):**
+- Copy Prisma CLI and @prisma modules from builder stage to production container
+- This is necessary because Prisma is in devDependencies but needed for runtime migrations
 
-**Before:**
-```dockerfile
-CMD ["node", "-r", "tsconfig-paths/register", "dist/apps/api/src/bootstrap/main.js"]
-```
+**Added (lines 52-53):**
+- Copy Prisma schema and migrations directory to production container
 
-**After:**
-```dockerfile
-CMD ["sh", "-c", "npx prisma migrate deploy --schema=src/infra/prisma/schema.prisma && node -r tsconfig-paths/register dist/apps/api/src/bootstrap/main.js"]
-```
+**Modified CMD (line 65-66):**
+- Changed from: `CMD ["node", "-r", "tsconfig-paths/register", "dist/apps/api/src/bootstrap/main.js"]`
+- Changed to: `CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema=src/infra/prisma/schema.prisma && node -r tsconfig-paths/register dist/apps/api/src/bootstrap/main.js"]`
+- Uses direct binary path instead of `npx` since Prisma is copied manually
 
 ## How to Deploy in Dokploy
 
@@ -71,6 +69,13 @@ Try logging in again. The `SCHEMA_OUT_OF_DATE` error should be resolved.
 ✅ **Safe rollbacks** - If migrations fail, the container won't start (preventing broken state)
 
 ## Troubleshooting
+
+### If you see Bad Gateway (502) error:
+
+1. **Check container logs** in Dokploy - the container may be crashing
+2. **Verify Prisma CLI is available** - ensure the COPY commands for prisma and @prisma are present
+3. **Check DATABASE_URL** environment variable is correctly set in Dokploy
+4. **Test database connectivity** from the container to your PostgreSQL database
 
 ### If deployment fails:
 

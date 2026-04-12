@@ -32,6 +32,10 @@ COPY package.json package-lock.json ./
 # Install production deps only
 RUN npm ci --omit=dev --ignore-scripts
 
+# Copy Prisma CLI from builder (needed for runtime migrations)
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
 # Copy tsconfig-paths + all its dependencies from builder
 # (tsconfig-paths is a devDep; re-installing via npm fails in workspace monorepos)
 COPY --from=builder /app/node_modules/tsconfig-paths ./node_modules/tsconfig-paths
@@ -59,4 +63,4 @@ WORKDIR /app/apps/api
 EXPOSE 8080
 
 # Run database migrations before starting the API server
-CMD ["sh", "-c", "npx prisma migrate deploy --schema=src/infra/prisma/schema.prisma && node -r tsconfig-paths/register dist/apps/api/src/bootstrap/main.js"]
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema=src/infra/prisma/schema.prisma && node -r tsconfig-paths/register dist/apps/api/src/bootstrap/main.js"]

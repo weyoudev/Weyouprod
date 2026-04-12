@@ -19,6 +19,17 @@ RUN npx prisma generate --schema=apps/api/src/infra/prisma/schema.prisma
 # Compile TypeScript
 RUN npm run build:api
 
+# ─── Stage 1.5: Migration runner (uses full deps including Prisma)
+FROM node:20-alpine AS migrator
+WORKDIR /app
+
+# Copy all dependencies (including devDependencies for Prisma)
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+
+# Copy Prisma schema and migrations
+COPY apps/api/src/infra/prisma ./apps/api/src/infra/prisma
+
 # ─── Stage 2: Production ──────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -31,10 +42,6 @@ COPY package.json package-lock.json ./
 
 # Install production deps only
 RUN npm ci --omit=dev --ignore-scripts
-
-# Copy Prisma CLI from builder (needed for runtime migrations)
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Copy tsconfig-paths + all its dependencies from builder
 # (tsconfig-paths is a devDep; re-installing via npm fails in workspace monorepos)
@@ -49,9 +56,6 @@ COPY --from=builder /app/apps/api/dist ./apps/api/dist
 # Copy Prisma generated client
 COPY --from=builder /app/apps/api/src/infra/generated ./apps/api/src/infra/generated
 
-# Copy Prisma schema and migrations for runtime deployment
-COPY --from=builder /app/apps/api/src/infra/prisma ./apps/api/src/infra/prisma
-
 # Copy API tsconfig (needed by tsconfig-paths at runtime)
 COPY --from=builder /app/apps/api/tsconfig.json ./apps/api/tsconfig.json
 
@@ -62,5 +66,5 @@ WORKDIR /app/apps/api
 
 EXPOSE 8080
 
-# Run database migrations before starting the API server
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema=src/infra/prisma/schema.prisma && node -r tsconfig-paths/register dist/apps/api/src/bootstrap/main.js"]
+# Start the API server (migrations should be run separately or via init container)
+CMD ["node", "-r", "tsconfig-paths/register", "dist/apps/api/src/bootstrap/main.js"]

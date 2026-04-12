@@ -56,6 +56,13 @@ COPY --from=builder /app/apps/api/dist ./apps/api/dist
 # Copy Prisma generated client
 COPY --from=builder /app/apps/api/src/infra/generated ./apps/api/src/infra/generated
 
+# Copy Prisma schema and migrations (needed for running migrations in production)
+COPY --from=migrator /app/apps/api/src/infra/prisma ./apps/api/src/infra/prisma
+
+# Copy Prisma CLI from migrator stage (needed to run migrations in container)
+COPY --from=migrator /app/node_modules/prisma ./node_modules/prisma
+COPY --from=migrator /app/node_modules/@prisma ./node_modules/@prisma
+
 # Copy API tsconfig (needed by tsconfig-paths at runtime)
 COPY --from=builder /app/apps/api/tsconfig.json ./apps/api/tsconfig.json
 
@@ -66,5 +73,6 @@ WORKDIR /app/apps/api
 
 EXPOSE 8080
 
-# Start the API server (migrations should be run separately or via init container)
+# Start the API server
+# To run migrations: cd /app/apps/api && npx prisma migrate deploy --schema=src/infra/prisma/schema.prisma
 CMD ["node", "-r", "tsconfig-paths/register", "dist/apps/api/src/bootstrap/main.js"]

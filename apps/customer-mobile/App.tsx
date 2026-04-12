@@ -27,6 +27,12 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import krackbotLogo from './assets/krackbot-logo.png';
+import washAndFoldIcon from './assets/service-icons/wash-and-fold.png';
+import washAndIronIcon from './assets/service-icons/wash-and-iron.png';
+import dryCleaningIcon from './assets/service-icons/dry-cleaning.png';
+import shoeCleaningIcon from './assets/service-icons/shoe-cleaning.png';
+import steamIronIcon from './assets/service-icons/steam-iron.png';
+import homeLinenIcon from './assets/service-icons/home-linen.png';
 import { checkApiConnection } from './src/config/api';
 import {
   checkServiceability,
@@ -76,6 +82,15 @@ type Step = 'phone' | 'otp' | 'profile' | 'done';
 type HomeScreen = 'home' | 'subscriptions' | 'subscriptionDetail' | 'addresses' | 'addAddress' | 'areaRequestSent' | 'bookPickup' | 'myOrders' | 'orderDetail' | 'profile';
 type OrderFilter = 'all' | 'walk_in' | 'individual' | 'subscription';
 type BookingStep = 'services' | 'address' | 'date' | 'time' | 'confirm';
+
+const SERVICE_ICON_SOURCE: Record<ServiceTypeId, any> = {
+  WASH_FOLD: washAndFoldIcon,
+  WASH_IRON: washAndIronIcon,
+  DRY_CLEAN: dryCleaningIcon,
+  SHOES: shoeCleaningIcon,
+  STEAM_IRON: steamIronIcon,
+  HOME_LINEN: homeLinenIcon,
+};
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -1947,7 +1962,7 @@ export default function App() {
                       onPress={() => toggleService(s.id)}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.serviceIcon}>{s.icon}</Text>
+                      <Image source={SERVICE_ICON_SOURCE[s.id]} style={styles.serviceIconImage} />
                       <Text style={[styles.serviceLabel, selected && styles.serviceLabelSelected]}>
                         {s.label}
                       </Text>
@@ -5170,6 +5185,12 @@ const styles = StyleSheet.create({
   serviceIcon: {
     fontSize: 28,
     marginBottom: 6,
+  },
+  serviceIconImage: {
+    width: 42,
+    height: 42,
+    marginBottom: 8,
+    resizeMode: 'contain',
   },
   serviceLabel: {
     fontSize: 14,

@@ -13,6 +13,12 @@ function safeFileName(fileName: string): boolean {
 }
 
 function resolveApiAssetsRoot(): string {
+  const configuredRoot = process.env.LOCAL_STORAGE_ROOT?.trim();
+  if (configuredRoot) {
+    const root = path.resolve(configuredRoot);
+    if (!fs.existsSync(root)) fs.mkdirSync(root, { recursive: true });
+    return root;
+  }
   const cwd = process.cwd();
   const monorepoApiRoot = path.resolve(cwd, 'apps', 'api');
   const apiRoot = fs.existsSync(path.join(monorepoApiRoot, 'src'))

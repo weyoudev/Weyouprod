@@ -160,6 +160,8 @@ export interface OrderAdminSummary {
 export interface OrdersRepo {
   create(data: CreateOrderInput): Promise<OrderRecord>;
   getById(id: string): Promise<OrderRecord | null>;
+  /** Permanently delete order and related records. */
+  deleteById(id: string): Promise<void>;
   /** Returns an order for this subscription that is not yet delivered or cancelled (if any). */
   findActiveBySubscriptionId(subscriptionId: string): Promise<OrderRecord | null>;
   /** All orders linked to this subscription (chronological). */

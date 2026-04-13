@@ -1,9 +1,10 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useOrderSummary } from '@/hooks/useOrderSummary';
 import { useUpdateOrderStatus } from '@/hooks/useOrderStatus';
+import { useDeleteOrder } from '@/hooks/useOrders';
 import { useCreateAckDraft, useIssueAck, useCreateFinalDraft, useIssueFinal } from '@/hooks/useInvoice';
 import { useCatalogItemsWithPrices, useCatalogItemsWithMatrix } from '@/hooks/useCatalog';
 import { useBranding } from '@/hooks/useBranding';
@@ -40,6 +41,7 @@ import { ExternalLink } from 'lucide-react';
 import { AcknowledgementInvoiceDialog } from '@/components/admin/orders/AcknowledgementInvoiceDialog';
 import { FinalInvoiceDialog } from '@/components/admin/orders/FinalInvoiceDialog';
 import { CUSTOMER_PWA_URL } from '@/lib/customer-app-url';
+import { getStoredUser } from '@/lib/auth';
 
 const STATUS_FLOW: OrderStatus[] = [
   'BOOKING_CONFIRMED',
@@ -49,12 +51,14 @@ const STATUS_FLOW: OrderStatus[] = [
 ];
 
 export default function OrderDetailPage() {
+  const router = useRouter();
   const params = useParams();
   const rawId = params?.id;
   const orderId = typeof rawId === 'string' ? rawId : Array.isArray(rawId) ? rawId[0] ?? '' : '';
 
   const { data: summary, isLoading, error } = useOrderSummary(orderId || null);
   const updateStatus = useUpdateOrderStatus(orderId);
+  const deleteOrder = useDeleteOrder();
   const createAckDraft = useCreateAckDraft(orderId);
   const issueAck = useIssueAck(orderId);
   const createFinalDraft = useCreateFinalDraft(orderId);
@@ -106,6 +110,7 @@ export default function OrderDetailPage() {
   const [paymentNote, setPaymentNote] = useState('');
   const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>('UPI');
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [ackViewerOpen, setAckViewerOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -379,6 +384,8 @@ export default function OrderDetailPage() {
   const finalSubmitted = finalInvoice?.status === 'ISSUED';
   const paymentRecorded = summary.payment?.status === 'CAPTURED';
   const showTabs = ackSubmitted;
+  const currentUser = getStoredUser();
+  const isAdmin = currentUser?.role === 'ADMIN';
   const isLocked = ackInvoice?.status === 'ISSUED';
   const isFinalLocked = paymentRecorded;
   const hasSubscription = !!(summary.subscription || summary.subscriptionUsage);
@@ -440,7 +447,7 @@ export default function OrderDetailPage() {
               name: i.name,
               quantity: i.quantity,
               unitPricePaise: i.unitPricePaise,
-              amountPaise: i.amountPaise ?? i.quantity * i.unitPricePaise,
+              amountPaise: Math.round(i.amountPaise ?? i.quantity * i.unitPricePaise),
               catalogItemId: i.catalogItemId,
               segmentCategoryId: i.segmentCategoryId,
               serviceCategoryId: i.serviceCategoryId,
@@ -509,7 +516,7 @@ export default function OrderDetailPage() {
         name: i.name,
         quantity: i.quantity,
         unitPricePaise: i.unitPricePaise,
-        amountPaise: i.amountPaise ?? i.quantity * i.unitPricePaise,
+        amountPaise: Math.round(i.amountPaise ?? i.quantity * i.unitPricePaise),
         catalogItemId: i.catalogItemId,
         segmentCategoryId: i.segmentCategoryId,
         serviceCategoryId: i.serviceCategoryId,
@@ -851,6 +858,16 @@ export default function OrderDetailPage() {
                   Cancel order
                 </Button>
               )}
+              {isAdmin && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  disabled={deleteOrder.isPending}
+                >
+                  Delete order
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -1004,6 +1021,41 @@ export default function OrderDetailPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent showClose={true}>
+          <DialogHeader>
+            <DialogTitle>Delete order permanently</DialogTitle>
+            <DialogDescription>
+              This action is irreversible. The order and all related records (invoices, payments, usage links) will be deleted permanently.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+            Warning: Once deleted, this order cannot be recovered.
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteOrder.isPending}
+              onClick={() => {
+                deleteOrder.mutate(order.id, {
+                  onSuccess: () => {
+                    toast.success('Order deleted permanently');
+                    setDeleteDialogOpen(false);
+                    router.push('/orders');
+                  },
+                  onError: (e) => toast.error(getFriendlyErrorMessage(e)),
+                });
+              }}
+            >
+              {deleteOrder.isPending ? 'Deleting…' : 'Delete permanently'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent showClose={true}>
           <DialogHeader>
@@ -1130,15 +1182,17 @@ export default function OrderDetailPage() {
               )}
             </div>
             <div className="text-right text-muted-foreground space-y-0.5">
-              {branding?.businessName?.trim() ? (
-                <p className="font-bold text-foreground mb-1">{branding.businessName.trim()}</p>
-              ) : null}
+              <p className="font-bold text-foreground mb-1">
+                {summary.branch?.name?.trim() || branding?.businessName?.trim() || '—'}
+              </p>
               {summary.branch?.panNumber && <p>PAN: {summary.branch.panNumber}</p>}
               {summary.branch?.gstNumber && <p>GST: {summary.branch.gstNumber}</p>}
               {summary.branch && (
                 <>
-                  <p className="font-medium text-foreground">{summary.branch.name}</p>
-                  <p>{summary.branch.address}</p>
+                  {summary.branch.address?.trim() &&
+                  summary.branch.address.trim().toLowerCase() !== summary.branch.name.trim().toLowerCase() ? (
+                    <p>{summary.branch.address}</p>
+                  ) : null}
                   {summary.branch.phone ? <p>Phone: {summary.branch.phone}</p> : null}
                 </>
               )}
@@ -1282,7 +1336,20 @@ export default function OrderDetailPage() {
             comments={ackComments}
             onCommentsChange={setAckComments}
             onSaveDraft={() =>
-              createAckDraft.mutate(toAckDraftBody(ackItems, ackTaxPercent, ackDiscountType, ackDiscountValue, ackComments, hasNewSubscriptionSelected ? ackSubscriptionAmountPaise : undefined))
+              createAckDraft.mutate(
+                toAckDraftBody(
+                  ackItems,
+                  ackTaxPercent,
+                  ackDiscountType,
+                  ackDiscountValue,
+                  ackComments,
+                  hasNewSubscriptionSelected ? ackSubscriptionAmountPaise : undefined,
+                ),
+                {
+                  onSuccess: () => toast.success('ACK invoice saved'),
+                  onError: (e) => toast.error(getFriendlyErrorMessage(e)),
+                },
+              )
             }
             onIssue={() => {
               const issueOpts = {
@@ -1492,15 +1559,17 @@ export default function OrderDetailPage() {
               )}
             </div>
             <div className="text-right text-muted-foreground space-y-0.5">
-              {branding?.businessName?.trim() ? (
-                <p className="font-bold text-foreground mb-1">{branding.businessName.trim()}</p>
-              ) : null}
+              <p className="font-bold text-foreground mb-1">
+                {summary.branch?.name?.trim() || branding?.businessName?.trim() || '—'}
+              </p>
               {summary.branch?.panNumber && <p>PAN: {summary.branch.panNumber}</p>}
               {summary.branch?.gstNumber && <p>GST: {summary.branch.gstNumber}</p>}
               {summary.branch && (
                 <>
-                  <p className="font-medium text-foreground">{summary.branch.name}</p>
-                  <p>{summary.branch.address}</p>
+                  {summary.branch.address?.trim() &&
+                  summary.branch.address.trim().toLowerCase() !== summary.branch.name.trim().toLowerCase() ? (
+                    <p>{summary.branch.address}</p>
+                  ) : null}
                   {summary.branch.phone ? <p>Phone: {summary.branch.phone}</p> : null}
                 </>
               )}

@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getStoredUser, isBranchFilterLocked } from '@/lib/auth';
-import { useOrders } from '@/hooks/useOrders';
+import { useDeleteOrder, useOrders } from '@/hooks/useOrders';
 import { useBranches } from '@/hooks/useBranches';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,9 @@ import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { LockedBranchSelect } from '@/components/shared/LockedBranchSelect';
 import { AdminOrderListOrderIdCell } from '@/components/shared/AdminOrderListOrderIdCell';
 import type { AdminOrderListRow, OrderStatus } from '@/types';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import { getFriendlyErrorMessage } from '@/lib/api';
 
 const STATUS_OPTIONS: OrderStatus[] = [
   'BOOKING_CONFIRMED',
@@ -39,11 +42,14 @@ export default function WalkInOrdersPage() {
   const user = useMemo(() => getStoredUser(), []);
   const branchLocked = !!(user && isBranchFilterLocked(user.role, user.branchId));
   const { data: branches = [] } = useBranches();
+  const deleteOrder = useDeleteOrder();
+  const isAdmin = user?.role === 'ADMIN';
   const [status, setStatus] = useState<OrderStatus | ''>('');
   const [branchId, setBranchId] = useState<string>('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [deleteDialogOrder, setDeleteDialogOrder] = useState<AdminOrderListRow | null>(null);
   const limit = 20;
 
   const effectiveBranchId = branchLocked ? (user?.branchId ?? branchId) : branchId;
@@ -186,6 +192,7 @@ export default function WalkInOrdersPage() {
                     <TableHead>Delivered</TableHead>
                     <TableHead>Payment</TableHead>
                     <TableHead className="text-right">Total</TableHead>
+                    {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -230,6 +237,20 @@ export default function WalkInOrdersPage() {
                       <TableCell className="text-right">
                         {row.billTotalPaise != null ? formatMoney(row.billTotalPaise) : 'NA'}
                       </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteDialogOrder(row);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -264,6 +285,41 @@ export default function WalkInOrdersPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!deleteDialogOrder} onOpenChange={(open) => !open && setDeleteDialogOrder(null)}>
+        <DialogContent showClose={true}>
+          <DialogHeader>
+            <DialogTitle>Delete walk-in order permanently</DialogTitle>
+            <DialogDescription>
+              This action is irreversible. The order and all related records will be deleted permanently.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+            Warning: This will permanently delete order {deleteDialogOrder?.id}.
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOrder(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!deleteDialogOrder || deleteOrder.isPending}
+              onClick={() => {
+                if (!deleteDialogOrder) return;
+                deleteOrder.mutate(deleteDialogOrder.id, {
+                  onSuccess: () => {
+                    toast.success('Order deleted permanently');
+                    setDeleteDialogOrder(null);
+                  },
+                  onError: (e) => toast.error(getFriendlyErrorMessage(e)),
+                });
+              }}
+            >
+              {deleteOrder.isPending ? 'Deleting…' : 'Delete permanently'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

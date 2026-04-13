@@ -1,5 +1,6 @@
-import { IsEnum, IsString, IsInt, Min, IsOptional } from 'class-validator';
+import { IsEnum, IsString, IsInt, IsNumber, Min, IsOptional } from 'class-validator';
 import { InvoiceItemType } from '@shared/enums';
+import { Type } from 'class-transformer';
 
 export class InvoiceDraftItemDto {
   @IsEnum(InvoiceItemType)
@@ -8,17 +9,19 @@ export class InvoiceDraftItemDto {
   @IsString()
   name!: string;
 
-  @IsInt()
-  @Min(1)
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.1)
   quantity!: number;
 
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   unitPricePaise!: number;
 
   @IsOptional()
-  @IsInt()
-  @Min(0)
+  @Type(() => Number)
+  @IsNumber()
   amountPaise?: number;
 
   @IsOptional()

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards, Req, Delete } from '@nestjs/common';
 import { Role } from '@shared/enums';
 import { AGENT_ROLE } from '../../common/agent-role';
 import { JwtAuthGuard } from '../../common/jwt-auth.guard';
@@ -55,5 +55,11 @@ export class AdminOrdersController {
   @Get(':id/summary')
   async getSummary(@Param('id') id: string) {
     return this.adminOrdersService.getSummary(id);
+  }
+
+  @Delete(':id')
+  @Roles(Role.ADMIN)
+  async deleteOrder(@Param('id') id: string) {
+    return this.adminOrdersService.deleteOrder(id);
   }
 }

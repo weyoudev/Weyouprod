@@ -9,6 +9,10 @@ services:
     name: weyou-api
     runtime: docker
     dockerfilePath: apps/api/Dockerfile
+    disks:
+      - name: weyou-api-storage
+        mountPath: /var/data
+        sizeGB: 10
     # Root Directory must be empty so build context is repo root (where package.json lives)
     envVars:
       - key: NODE_ENV
@@ -16,7 +20,7 @@ services:
       - key: PORT
         value: 10000
       - key: LOCAL_STORAGE_ROOT
-        value: /tmp/storage
+        value: /var/data/storage
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET

@@ -81,6 +81,11 @@ export function createFakeOrdersRepo(initial: OrderRecord[] = []): OrdersRepo & 
     async getById(id: string): Promise<OrderRecord | null> {
       return records.find((r) => r.id === id) ?? null;
     },
+    async deleteById(id: string): Promise<void> {
+      const i = records.findIndex((r) => r.id === id);
+      if (i < 0) throw new Error('Order not found');
+      records.splice(i, 1);
+    },
     async findActiveBySubscriptionId(subscriptionId: string): Promise<OrderRecord | null> {
       const active = records
         .filter(

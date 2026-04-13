@@ -376,7 +376,7 @@ export function InvoiceBuilder({
     const name = matrixItem.name;
     const qty = Math.max(1, matrixQty);
     const unit = matrixPricePaise;
-    const amount = qty * unit;
+    const amount = Math.round(qty * unit);
     onItemsChange([
       ...items,
       {
@@ -409,7 +409,7 @@ export function InvoiceBuilder({
         : catalog?.length && catalogService === 'ADD_ONS'
           ? 'ADDON'
           : newType;
-    const amount = lineType === 'DISCOUNT' ? -(qty * unit) : qty * unit;
+    const amount = lineType === 'DISCOUNT' ? -Math.round(qty * unit) : Math.round(qty * unit);
     onItemsChange([
       ...items,
       {
@@ -458,8 +458,8 @@ export function InvoiceBuilder({
     }
     const amount =
       updated.type === 'DISCOUNT'
-        ? -(updated.quantity * updated.unitPricePaise)
-        : updated.quantity * updated.unitPricePaise;
+        ? -Math.round(updated.quantity * updated.unitPricePaise)
+        : Math.round(updated.quantity * updated.unitPricePaise);
     const next = items.map((r, i) =>
       i === index ? { ...updated, amountPaise: amount } : r
     );

@@ -164,7 +164,9 @@ export const InvoicePrintView = forwardRef<HTMLDivElement, InvoicePrintViewProps
                 Subscription booking{summary.subscription?.planName ? ` (${summary.subscription.planName})` : ''}
               </p>
             )}
-            <p>{address.addressLine}, {address.pincode}</p>
+            {order.orderSource !== 'WALK_IN' && (
+              <p>{address.addressLine}, {address.pincode}</p>
+            )}
             <p className="text-gray-600">
               Pickup:{' '}
               {order.orderSource === 'WALK_IN'
@@ -180,8 +182,11 @@ export const InvoicePrintView = forwardRef<HTMLDivElement, InvoicePrintViewProps
             {branding?.gstNumber && <p>GST: {branding.gstNumber}</p>}
             {branch && (
               <>
-                <p className="font-medium text-gray-900">{branch.name}</p>
-                <p>{branch.address}</p>
+                {branch.address?.trim() &&
+                branch.address.trim().toLowerCase() !== branch.name.trim().toLowerCase() ? (
+                  <p>{branch.address}</p>
+                ) : null}
+                {branch.phone ? <p>Phone: {branch.phone}</p> : null}
               </>
             )}
           </div>

@@ -185,6 +185,10 @@ export class PrismaOrdersRepo implements OrdersRepo {
     return order ? toOrderRecord(order) : null;
   }
 
+  async deleteById(id: string): Promise<void> {
+    await this.prisma.order.delete({ where: { id } });
+  }
+
   async findActiveBySubscriptionId(subscriptionId: string): Promise<OrderRecord | null> {
     const order = await this.prisma.order.findFirst({
       where: {

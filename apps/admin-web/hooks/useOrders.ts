@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { AdminOrdersResponse, AdminOrdersFilters } from '@/types';
 
@@ -29,5 +29,21 @@ export function useOrders(
     queryKey: ['admin', 'orders', filters],
     queryFn: () => fetchOrders(filters),
     refetchInterval: options?.refetchInterval,
+  });
+}
+
+async function deleteOrder(orderId: string): Promise<{ orderId: string; deleted: true }> {
+  const { data } = await api.delete<{ orderId: string; deleted: true }>(`/admin/orders/${orderId}`);
+  return data;
+}
+
+export function useDeleteOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: string) => deleteOrder(orderId),
+    onSuccess: (_, orderId) => {
+      qc.invalidateQueries({ queryKey: ['admin', 'orders'] });
+      qc.removeQueries({ queryKey: ['admin', 'orders', orderId] });
+    },
   });
 }

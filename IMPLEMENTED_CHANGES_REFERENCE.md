@@ -1,7 +1,49 @@
 # Implemented Changes Reference
 
-Date: 2026-03-30 (updated 2026-04-10)  
+Date: 2026-03-30 (updated 2026-04-14)  
 Project: Weyouprod monorepo
+
+## Feedback flow + admin feedback page (2026-04-14)
+
+- **Admin feedback filters (single row):**
+  - `apps/admin-web/app/(protected)/feedback/page.tsx`
+  - Filters were aligned to one horizontal row using non-wrapping layout with horizontal scroll for smaller widths.
+
+- **Admin feedback list is read-only (no update popup):**
+  - `apps/admin-web/app/(protected)/feedback/page.tsx`
+  - Removed row-click dialog (`Update feedback`) and mutation wiring; feedback is now static information in the table.
+  - Added visible **Status** column in the list so status can still be reviewed without opening a modal.
+
+- **Admin feedback API robustness (`400` fixes):**
+  - `apps/admin-web/hooks/useFeedback.ts` now sends only valid query params:
+    - `rating` only if integer `1..5`
+    - `dateFrom`/`dateTo` only if valid `YYYY-MM-DD`
+  - `apps/admin-web/app/(protected)/feedback/page.tsx` now displays parsed API error text (`getApiError(error).message`) instead of generic Axios status text.
+  - `apps/api/src/api/feedback/admin-feedback.controller.ts` includes safer optional parsing for ints/dates.
+
+- **Exclude deleted-order feedback from admin views:**
+  - `apps/api/src/infra/prisma/repos/prisma-feedback-repo.ts`
+  - Admin list/stats now include `ORDER` feedback only when `orderId` is non-null (deleted orders are hidden).
+  - Added cleanup utility:
+    - `scripts/cleanup-orphan-order-feedback.ts`
+    - npm script: `cleanup:orphan-feedback`
+  - Dry run: `npm run cleanup:orphan-feedback`
+  - Delete mode: `ORPHAN_FEEDBACK_CLEANUP_CONFIRM=YES npm run cleanup:orphan-feedback`
+
+- **Customer mobile auto feedback prompt restored after payment:**
+  - `apps/customer-mobile/App.tsx`
+  - Auto prompt now triggers for delivered orders when payment status is `CAPTURED` **or** `PAID`.
+  - If eligibility check API fails, app still opens the feedback modal as fallback (submit endpoint still enforces server rules).
+
+- **Customer mobile feedback error handling improved:**
+  - `apps/customer-mobile/src/api.ts`
+  - Error parsing now reads nested backend format (`error.message`) so user sees actionable failure reason instead of generic "Failed to submit feedback".
+
+- **Legacy DB compatibility for `Feedback.tags` (TEXT vs TEXT[]):**
+  - `apps/api/src/infra/prisma/repos/prisma-feedback-repo.ts`
+  - `create()` uses SQL insert path compatible with legacy `tags` storage to avoid Prisma list-serialization crash:
+    - `Couldn't serialize value Some([]) into a text`
+  - Read paths avoid selecting `tags` where not needed and normalize tags safely when mapped.
 
 ## Customer app (PWA + Mobile)
 

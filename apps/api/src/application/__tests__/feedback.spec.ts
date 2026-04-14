@@ -1,6 +1,6 @@
 /**
  * Feedback use-case tests:
- * - Cannot submit order feedback unless DELIVERED + CAPTURED => FEEDBACK_NOT_ALLOWED
+ * - Cannot submit order feedback unless DELIVERED => FEEDBACK_NOT_ALLOWED
  * - Cannot submit second feedback for same order => FEEDBACK_ALREADY_EXISTS
  * - Customer cannot submit feedback for other customer's order => FEEDBACK_ACCESS_DENIED
  * - General feedback works without orderId
@@ -44,7 +44,7 @@ describe('Feedback use-cases', () => {
     ).rejects.toMatchObject({ code: 'FEEDBACK_NOT_ALLOWED' });
   });
 
-  it('throws FEEDBACK_NOT_ALLOWED when payment is not CAPTURED', async () => {
+  it('allows feedback for DELIVERED order even when payment is not CAPTURED', async () => {
     const ordersRepo = createFakeOrdersRepo([
       {
         id: orderId,
@@ -65,12 +65,12 @@ describe('Feedback use-cases', () => {
     ]);
     const feedbackRepo = createFakeFeedbackRepo();
 
-    await expect(
-      createOrderFeedback(
-        { userId, orderId, rating: 5 },
-        { ordersRepo, feedbackRepo },
-      ),
-    ).rejects.toMatchObject({ code: 'FEEDBACK_NOT_ALLOWED' });
+    const result = await createOrderFeedback(
+      { userId, orderId, rating: 5 },
+      { ordersRepo, feedbackRepo },
+    );
+    expect(result.orderId).toBe(orderId);
+    expect(result.rating).toBe(5);
   });
 
   it('throws FEEDBACK_ALREADY_EXISTS when submitting second feedback for same order', async () => {
@@ -146,7 +146,7 @@ describe('Feedback use-cases', () => {
     ).rejects.toMatchObject({ code: 'FEEDBACK_ACCESS_DENIED' });
   });
 
-  it('creates order feedback when DELIVERED + CAPTURED', async () => {
+  it('creates order feedback when DELIVERED', async () => {
     const ordersRepo = createFakeOrdersRepo([
       {
         id: orderId,

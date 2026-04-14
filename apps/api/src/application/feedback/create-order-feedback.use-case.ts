@@ -20,7 +20,7 @@ export interface CreateOrderFeedbackDeps {
 }
 
 /**
- * Creates ORDER feedback. Allowed only when order is DELIVERED and payment CAPTURED.
+ * Creates ORDER feedback. Allowed only when order is DELIVERED.
  * Enforces one feedback per order. Order must belong to userId.
  */
 export async function createOrderFeedback(
@@ -47,14 +47,6 @@ export async function createOrderFeedback(
       { status: order.status },
     );
   }
-  if (order.paymentStatus !== 'CAPTURED') {
-    throw new AppError(
-      'FEEDBACK_NOT_ALLOWED',
-      'Feedback is only allowed after payment is captured',
-      { paymentStatus: order.paymentStatus },
-    );
-  }
-
   const existing = await deps.feedbackRepo.getByOrderId(input.orderId);
   if (existing) {
     throw new AppError('FEEDBACK_ALREADY_EXISTS', 'Feedback already submitted for this order', {

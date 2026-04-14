@@ -158,6 +158,21 @@ async function parseErrorResponse(res: Response): Promise<string> {
   }
 }
 
+function extractApiErrorMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const root = payload as Record<string, unknown>;
+  if (typeof root.message === 'string' && root.message.trim()) return root.message;
+  const nestedError = root.error;
+  if (nestedError && typeof nestedError === 'object') {
+    const err = nestedError as Record<string, unknown>;
+    if (typeof err.message === 'string' && err.message.trim()) return err.message;
+    if (Array.isArray(err.message)) {
+      return err.message.filter((v) => typeof v === 'string').join(', ') || null;
+    }
+  }
+  return null;
+}
+
 export async function requestOtp(phone: string): Promise<{ requestId: string }> {
   const base = apiBase();
   if (!base) {
@@ -786,8 +801,8 @@ export async function checkOrderFeedbackEligibility(
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(body?.message ?? 'Failed to check feedback eligibility');
+    const body = (await res.json().catch(() => null)) as unknown;
+    throw new Error(extractApiErrorMessage(body) ?? 'Failed to check feedback eligibility');
   }
   return res.json() as Promise<OrderFeedbackEligibilityResponse>;
 }
@@ -809,8 +824,8 @@ export async function submitOrderFeedback(
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const errBody = (await res.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(errBody?.message ?? 'Failed to submit feedback');
+    const errBody = (await res.json().catch(() => null)) as unknown;
+    throw new Error(extractApiErrorMessage(errBody) ?? 'Failed to submit feedback');
   }
   return res.json() as Promise<OrderFeedbackSubmissionResponse>;
 }

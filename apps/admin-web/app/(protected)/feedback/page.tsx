@@ -5,13 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
   Table,
   TableBody,
   TableCell,
@@ -20,13 +13,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useBranches } from '@/hooks/useBranches';
-import { useFeedbackList, useFeedbackRatingStats, useUpdateFeedbackStatus } from '@/hooks/useFeedback';
+import { useFeedbackList, useFeedbackRatingStats } from '@/hooks/useFeedback';
 import { formatDateTime } from '@/lib/format';
-import type { FeedbackRecord, FeedbackStatus, FeedbackType } from '@/types';
-import { toast } from 'sonner';
+import type { FeedbackStatus, FeedbackType } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getStoredUser, isBranchFilterLocked } from '@/lib/auth';
 import { LockedBranchSelect } from '@/components/shared/LockedBranchSelect';
+import { getApiError } from '@/lib/api';
 
 const STATUS_OPTIONS: FeedbackStatus[] = ['NEW', 'REVIEWED', 'RESOLVED'];
 const TYPE_OPTIONS: FeedbackType[] = ['ORDER', 'GENERAL'];
@@ -38,9 +31,6 @@ export default function FeedbackPage() {
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   const [cursor, setCursor] = useState<string | undefined>(undefined);
-  const [selected, setSelected] = useState<FeedbackRecord | null>(null);
-  const [editStatus, setEditStatus] = useState<FeedbackStatus>('NEW');
-  const [editNotes, setEditNotes] = useState('');
 
   const user = useMemo(() => getStoredUser(), []);
   const branchLocked = !!(user && isBranchFilterLocked(user.role, user.branchId));
@@ -69,24 +59,6 @@ export default function FeedbackPage() {
     dateTo: dateTo || undefined,
     branchId: effectiveBranchId ?? undefined,
   });
-  const updateStatus = useUpdateFeedbackStatus(selected?.id ?? '');
-
-  const handleOpenDialog = (row: FeedbackRecord) => {
-    setSelected(row);
-    setEditStatus(row.status);
-    setEditNotes(row.adminNotes ?? '');
-  };
-
-  const handleSave = async () => {
-    if (!selected) return;
-    try {
-      await updateStatus.mutateAsync({ status: editStatus, adminNotes: editNotes || undefined });
-      toast.success('Feedback updated');
-      setSelected(null);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Update failed');
-    }
-  };
 
   const handleLoadMore = () => {
     if (data?.nextCursor) setCursor(data.nextCursor);
@@ -99,7 +71,7 @@ export default function FeedbackPage() {
         <CardHeader>
           <CardTitle>Filters</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-4">
+        <CardContent className="flex flex-nowrap items-end gap-4 overflow-x-auto pb-1 [&>div]:shrink-0">
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">Type</label>
             <select
@@ -244,7 +216,7 @@ export default function FeedbackPage() {
         </CardHeader>
         <CardContent>
           {error ? (
-            <p className="text-destructive">{(error as Error).message}</p>
+            <p className="text-destructive">{getApiError(error).message}</p>
           ) : null}
           {isLoading && <Skeleton className="h-48 w-full" />}
           {!isLoading && data && (
@@ -255,6 +227,7 @@ export default function FeedbackPage() {
                     <TableHead>Customer</TableHead>
                     <TableHead>Order ID</TableHead>
                     <TableHead>Mobile</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Rating</TableHead>
                     <TableHead>Feedback Given</TableHead>
                     <TableHead>Message</TableHead>
@@ -262,14 +235,11 @@ export default function FeedbackPage() {
                 </TableHeader>
                 <TableBody>
                   {data.data.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleOpenDialog(row)}
-                    >
+                    <TableRow key={row.id}>
                       <TableCell>{row.customerName ?? '—'}</TableCell>
                       <TableCell>{row.orderId ?? '—'}</TableCell>
                       <TableCell>{row.customerPhone ?? '—'}</TableCell>
+                      <TableCell>{row.status}</TableCell>
                       <TableCell>{row.rating ?? '—'}</TableCell>
                       <TableCell>{formatDateTime(row.createdAt)}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{row.message ?? '—'}</TableCell>
@@ -289,44 +259,6 @@ export default function FeedbackPage() {
           )}
         </CardContent>
       </Card>
-      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update feedback</DialogTitle>
-          </DialogHeader>
-          {selected && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
-                <select
-                  className="w-full h-9 rounded border bg-background px-3 text-sm"
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as FeedbackStatus)}
-                >
-                  {STATUS_OPTIONS.map((o) => (
-                    <option key={o} value={o}>{o}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Admin notes</label>
-                <textarea
-                  className="w-full min-h-[80px] rounded border bg-background px-3 py-2 text-sm"
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  placeholder="Optional notes"
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelected(null)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={updateStatus.isPending}>
-              {updateStatus.isPending ? 'Saving…' : 'Save'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

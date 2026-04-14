@@ -689,14 +689,15 @@ export default function App() {
     }
   }, [step, homeScreen, token, selectedOrderId, fetchAddresses]);
 
-  // When an order is completed (DELIVERED + CAPTURED), ask the customer for rating feedback (once per order).
+  // When an order is completed and paid, ask the customer for rating feedback (once per order).
   useEffect(() => {
     if (!token || !orderDetail || !selectedOrderId) return;
     if (step !== 'done' || homeScreen !== 'orderDetail') return;
 
     const status = String(orderDetail.status || '').toUpperCase();
     const paymentStatus = String(orderDetail.paymentStatus || '').toUpperCase();
-    if (status !== 'DELIVERED' || paymentStatus !== 'CAPTURED') return;
+    const isPaid = paymentStatus === 'CAPTURED' || paymentStatus === 'PAID';
+    if (status !== 'DELIVERED' || !isPaid) return;
 
     if (feedbackSubmittedForOrderIdRef.current === selectedOrderId) return;
     if (feedbackEligibilityCheckedForOrderIdRef.current === selectedOrderId) return;
@@ -716,7 +717,14 @@ export default function App() {
           setFeedbackModalVisible(true);
         }
       } catch (err) {
-        // If eligibility check fails, we silently skip feedback prompt.
+        // If eligibility check fails, still prompt to avoid missing feedback collection.
+        // Backend will reject duplicate submits, so this fallback is safe.
+        if (!cancelled) {
+          setFeedbackRating(null);
+          setFeedbackComment('');
+          setFeedbackError(null);
+          setFeedbackModalVisible(true);
+        }
         if (feedbackEligibilityCheckedForOrderIdRef.current === selectedOrderId) {
           feedbackEligibilityCheckedForOrderIdRef.current = null;
         }

@@ -13,7 +13,7 @@ export interface FeedbackEligibilityResult {
 }
 
 /**
- * Returns whether the order is eligible for order feedback (DELIVERED + CAPTURED)
+ * Returns whether the order is eligible for order feedback (DELIVERED)
  * and whether feedback was already submitted. Used by GET /api/orders/:id/feedback/eligibility.
  */
 export async function checkFeedbackEligibility(
@@ -40,13 +40,5 @@ export async function checkFeedbackEligibility(
       alreadySubmitted: false,
     };
   }
-  if (order.paymentStatus !== 'CAPTURED') {
-    return {
-      eligible: false,
-      reason: 'Feedback is only allowed after payment is captured',
-      alreadySubmitted: false,
-    };
-  }
-
   return { eligible: true, alreadySubmitted: false };
 }

@@ -37,6 +37,7 @@
     "prisma:seed": "npx ts-node --transpile-only --project scripts/tsconfig.seed.json scripts/seed.ts",
     "supabase:ensure-assets-bucket": "npx ts-node --transpile-only --project scripts/tsconfig.seed.json scripts/ensure-supabase-assets-bucket.ts",
     "purge:db": "npx ts-node --transpile-only --project scripts/tsconfig.seed.json scripts/purge-db.ts",
+    "cleanup:orphan-feedback": "npx ts-node --transpile-only --project scripts/tsconfig.seed.json scripts/cleanup-orphan-order-feedback.ts",
     "reset:all": "cross-env RESET_ALL_CONFIRM=YES npx ts-node --transpile-only --project scripts/tsconfig.seed.json scripts/reset-all-data.ts",
     "smoke:test": "ts-node scripts/smoke-test.ts",
     "smoke-admin": "ts-node scripts/smoke-admin-flow.ts",

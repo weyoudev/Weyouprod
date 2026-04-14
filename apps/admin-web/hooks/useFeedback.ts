@@ -13,13 +13,21 @@ interface FeedbackFilters {
   cursor?: string;
 }
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isValidIsoDate(value?: string): value is string {
+  return !!value && ISO_DATE_RE.test(value);
+}
+
 function fetchFeedback(filters: FeedbackFilters): Promise<AdminFeedbackResponse> {
   const params = new URLSearchParams();
   if (filters.type) params.set('type', filters.type);
   if (filters.status) params.set('status', filters.status);
-  if (filters.rating != null) params.set('rating', String(filters.rating));
-  if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
-  if (filters.dateTo) params.set('dateTo', filters.dateTo);
+  if (Number.isInteger(filters.rating) && (filters.rating as number) >= 1 && (filters.rating as number) <= 5) {
+    params.set('rating', String(filters.rating));
+  }
+  if (isValidIsoDate(filters.dateFrom)) params.set('dateFrom', filters.dateFrom);
+  if (isValidIsoDate(filters.dateTo)) params.set('dateTo', filters.dateTo);
   if (filters.branchId) params.set('branchId', filters.branchId);
   params.set('limit', String(filters.limit ?? 20));
   if (filters.cursor) params.set('cursor', filters.cursor);
@@ -56,8 +64,8 @@ function fetchFeedbackRatingStats(filters: FeedbackRatingStatsFilters): Promise<
   const params = new URLSearchParams();
   if (filters.type) params.set('type', filters.type);
   if (filters.status) params.set('status', filters.status);
-  if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
-  if (filters.dateTo) params.set('dateTo', filters.dateTo);
+  if (isValidIsoDate(filters.dateFrom)) params.set('dateFrom', filters.dateFrom);
+  if (isValidIsoDate(filters.dateTo)) params.set('dateTo', filters.dateTo);
   if (filters.branchId) params.set('branchId', filters.branchId);
   return api.get<AdminFeedbackRatingStatsResponse>(`/admin/feedback/stats?${params.toString()}`).then((r) => r.data);
 }

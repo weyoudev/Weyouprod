@@ -11,6 +11,18 @@ import { AdminUpdateFeedbackDto } from './dto/admin-update-feedback.dto';
 import type { FeedbackType } from '@shared/enums';
 import type { FeedbackStatus } from '@shared/enums';
 
+function parseOptionalInt(value?: string): number | undefined {
+  if (value == null || value.trim() === '') return undefined;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseOptionalDate(value?: string): Date | undefined {
+  if (value == null || value.trim() === '') return undefined;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 @Controller('admin/feedback')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN, Role.OPS, AGENT_ROLE)
@@ -32,14 +44,15 @@ export class AdminFeedbackController {
     const user = req.user;
     const effectiveBranchId =
       isBranchScopedStaffRole(user.role) && user.branchId ? user.branchId : branchId || undefined;
+    const parsedLimit = parseOptionalInt(limit);
     const filters = {
       type: type as FeedbackType | undefined,
       status: status as FeedbackStatus | undefined,
-      rating: rating != null ? parseInt(rating, 10) : undefined,
+      rating: parseOptionalInt(rating),
       branchId: effectiveBranchId,
-      dateFrom: dateFrom ? new Date(dateFrom) : undefined,
-      dateTo: dateTo ? new Date(dateTo) : undefined,
-      limit: limit != null ? Math.min(parseInt(limit, 10) || 20, 100) : 20,
+      dateFrom: parseOptionalDate(dateFrom),
+      dateTo: parseOptionalDate(dateTo),
+      limit: parsedLimit != null ? Math.min(parsedLimit || 20, 100) : 20,
       cursor,
     };
     return this.feedbackService.adminList(filters);
@@ -61,8 +74,8 @@ export class AdminFeedbackController {
       type: type as FeedbackType | undefined,
       status: status as FeedbackStatus | undefined,
       branchId: effectiveBranchId,
-      dateFrom: dateFrom ? new Date(dateFrom) : undefined,
-      dateTo: dateTo ? new Date(dateTo) : undefined,
+      dateFrom: parseOptionalDate(dateFrom),
+      dateTo: parseOptionalDate(dateTo),
     });
   }
 

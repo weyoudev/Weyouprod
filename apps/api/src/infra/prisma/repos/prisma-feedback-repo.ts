@@ -87,16 +87,6 @@ function isPrismaUniqueConstraint(e: unknown): boolean {
   return false;
 }
 
-function isTagsColumnSerializationError(e: unknown): boolean {
-  if (!(e instanceof Error)) return false;
-  const msg = e.message ?? '';
-  return (
-    msg.includes('Value is a list but') &&
-    msg.includes('text') &&
-    msg.includes('serialize value')
-  );
-}
-
 export class PrismaFeedbackRepo implements FeedbackRepo {
   constructor(private readonly prisma: PrismaLike) {}
 
@@ -160,7 +150,7 @@ export class PrismaFeedbackRepo implements FeedbackRepo {
             ${tagsText},
             ${input.message ?? null},
             ${(input.status as 'NEW' | 'REVIEWED' | 'RESOLVED') ?? 'NEW'}::"FeedbackStatus",
-            ${input.adminNotes ?? null},
+            ${null},
             NOW(),
             NOW()
           )

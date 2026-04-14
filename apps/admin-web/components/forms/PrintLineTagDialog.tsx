@@ -22,7 +22,7 @@ const LABEL_W_MM = 36;
 const LABEL_H_MM = 30;
 const LABEL_PADDING_MM = 2;
 
-const TAG_TITLE = 'We you';
+const TAG_TITLE = 'WeYou';
 
 export interface PrintLineTagPayload {
   /** Legacy field from callers; printed title is fixed to TAG_TITLE. */

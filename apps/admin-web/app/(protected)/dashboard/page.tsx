@@ -2,8 +2,9 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ExternalLink } from 'lucide-react';
-import { getStoredUser, isBranchFilterLocked, isBranchScopedStaff } from '@/lib/auth';
+import { ExternalLink, Plus } from 'lucide-react';
+import { getStoredUser, isBranchFilterLocked, isBranchScopedStaff, type Role } from '@/lib/auth';
+import { canAccessRoute } from '@/lib/permissions';
 import { useAnalyticsRevenue, useDashboardKpis } from '@/hooks/useAnalytics';
 import { useOrders } from '@/hooks/useOrders';
 import { useOrderSummary } from '@/hooks/useOrderSummary';
@@ -157,8 +158,9 @@ function playNewOrderAlert(): void {
 
 export default function DashboardPage() {
   const user = useMemo(() => getStoredUser(), []);
-  const role = user?.role ?? 'CUSTOMER';
+  const role = (user?.role ?? 'CUSTOMER') as Role;
   const isAgent = role === 'AGENT';
+  const canCreateWalkIn = canAccessRoute(role, '/walk-in-orders/new');
   const branchScoped = isBranchScopedStaff(role);
   const branchLocked = isBranchFilterLocked(role, user?.branchId);
   const [branchId, setBranchId] = useState<string>(() =>
@@ -624,6 +626,17 @@ export default function DashboardPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {canCreateWalkIn && (
+        <Link
+          href="/walk-in-orders/new"
+          className="fixed bottom-6 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-primary/20 transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:right-6"
+          aria-label="New walk-in order"
+          title="New walk-in order"
+        >
+          <Plus className="h-7 w-7" strokeWidth={2.5} aria-hidden />
+        </Link>
+      )}
     </div>
   );
 }

@@ -387,6 +387,7 @@ export default function App() {
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   const [userPhone, setUserPhone] = useState<string>('');
   const [carouselImageUrls, setCarouselImageUrls] = useState<string[]>([]);
+  const [carouselInitialized, setCarouselInitialized] = useState(false);
   const [homeRefreshing, setHomeRefreshing] = useState(false);
   const carouselScrollRef = useRef<ScrollView>(null);
   const carouselPageRef = useRef(0);
@@ -497,7 +498,9 @@ export default function App() {
   }, [step]);
 
   const fetchCarousel = useCallback(() => {
-    getPublicCarousel().then((r) => setCarouselImageUrls(r.imageUrls ?? []));
+    getPublicCarousel()
+      .then((r) => setCarouselImageUrls(r.imageUrls ?? []))
+      .finally(() => setCarouselInitialized(true));
   }, []);
 
   useEffect(() => {
@@ -517,7 +520,10 @@ export default function App() {
         setCarouselImageUrls(carouselRes.imageUrls ?? []);
         setWelcomeBranding(branding);
       })
-      .finally(() => setHomeRefreshing(false));
+      .finally(() => {
+        setCarouselInitialized(true);
+        setHomeRefreshing(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -529,7 +535,7 @@ export default function App() {
 
   useEffect(() => {
     if (step !== 'done' || homeScreen !== 'home') return;
-    const total = carouselImageUrls.length > 0 ? carouselImageUrls.length : 3;
+    const total = carouselImageUrls.length > 0 ? carouselImageUrls.length : carouselInitialized ? 3 : 0;
     if (total <= 1) return;
     const winW = appScreenWidth;
     const id = setInterval(() => {
@@ -3305,6 +3311,7 @@ export default function App() {
         require('./assets/banners/banner3.png'),
       ];
       const showApiCarousel = carouselImageUrls.length > 0;
+      const showFallbackBanners = carouselInitialized && !showApiCarousel;
       content = (
         <View style={styles.homeLayout}>
           <ScrollView
@@ -3337,11 +3344,15 @@ export default function App() {
                         <Image source={{ uri: carouselImageFullUrl(url) }} style={styles.carouselImage} resizeMode="cover" />
                       </View>
                     ))
-                  : bannerImages.map((src, index) => (
+                  : showFallbackBanners
+                    ? bannerImages.map((src, index) => (
                       <View key={index} style={[styles.carouselSlide, { width: winWidth, height: carouselHeight }]}>
                         <Image source={src} style={styles.carouselImage} resizeMode="cover" />
                       </View>
-                    ))}
+                      ))
+                    : (
+                      <View style={[styles.carouselSlide, { width: winWidth, height: carouselHeight }]} />
+                      )}
               </ScrollView>
             </View>
             <View style={[styles.card, styles.homeWelcomeCard]}>

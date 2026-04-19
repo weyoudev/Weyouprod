@@ -29,11 +29,12 @@ export function useUploadCarouselImage() {
     mutationFn: ({ file, position }: { file: File; position: number }) => {
       const form = new FormData();
       form.append('file', file);
-      return api.post<{ position: number; imageUrl: string; id: string }>(
-        `/admin/carousel/upload?position=${position}`,
-        form,
-        { headers: { 'Content-Type': 'multipart/form-data' } },
-      ).then((r) => r.data);
+      return api
+        .post<{ position: number; imageUrl: string; id: string }>(
+          `/admin/carousel/upload?position=${position}`,
+          form,
+        )
+        .then((r) => r.data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'carousel'] });

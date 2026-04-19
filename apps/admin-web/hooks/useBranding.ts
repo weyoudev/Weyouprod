@@ -50,9 +50,7 @@ export function useUploadLogo() {
     mutationFn: (file: File) => {
       const form = new FormData();
       form.append('file', file);
-      return api.post<BrandingSettings>('/admin/branding/logo', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }).then((r) => r.data);
+      return api.post<BrandingSettings>('/admin/branding/logo', form).then((r) => r.data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'branding'] });
@@ -66,9 +64,7 @@ export function useUploadUpiQr() {
     mutationFn: (file: File) => {
       const form = new FormData();
       form.append('file', file);
-      return api.post<BrandingSettings>('/admin/branding/upi-qr', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }).then((r) => r.data);
+      return api.post<BrandingSettings>('/admin/branding/upi-qr', form).then((r) => r.data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'branding'] });
@@ -82,9 +78,7 @@ export function useUploadWelcomeBackground() {
     mutationFn: (file: File) => {
       const form = new FormData();
       form.append('file', file);
-      return api.post<BrandingSettings>('/admin/branding/welcome-background', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }).then((r) => r.data);
+      return api.post<BrandingSettings>('/admin/branding/welcome-background', form).then((r) => r.data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'branding'] });
@@ -98,9 +92,7 @@ export function useUploadAppIcon() {
     mutationFn: (file: File) => {
       const form = new FormData();
       form.append('file', file);
-      return api.post<BrandingSettings>('/admin/branding/app-icon', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }).then((r) => r.data);
+      return api.post<BrandingSettings>('/admin/branding/app-icon', form).then((r) => r.data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'branding'] });

@@ -187,9 +187,7 @@ export function useUploadCatalogIcon() {
       const form = new FormData();
       form.append('file', file);
       const query = key ? `?key=${encodeURIComponent(key)}` : '';
-      const res = await api.post<{ url: string }>(`/admin/catalog/icon/upload${query}`, form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await api.post<{ url: string }>(`/admin/catalog/icon/upload${query}`, form);
       return res.data.url;
     },
   });

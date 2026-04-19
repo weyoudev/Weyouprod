@@ -13,9 +13,8 @@ import { FormField } from '@/components/ui/form-field';
 import { useBranding, useUpdateBranding, useUploadLogo, useUploadUpiQr, useUploadWelcomeBackground, useUploadAppIcon } from '@/hooks/useBranding';
 import { useBranches, useDeleteBranch } from '@/hooks/useBranches';
 import { useCarousel, useUploadCarouselImage, useRemoveCarouselImage } from '@/hooks/useCarousel';
-import { getApiOrigin } from '@/lib/api';
+import { getApiOrigin, getFriendlyErrorMessage } from '@/lib/api';
 import { toast } from 'sonner';
-import { getFriendlyErrorMessage } from '@/lib/api';
 import type { UpdateBrandingBody, Branch } from '@/types';
 import { Loader2, Pencil, Trash2, Plus } from 'lucide-react';
 import { BranchFormModal } from '@/components/branding/BranchFormModal';
@@ -136,7 +135,7 @@ export default function BrandingPage() {
     };
     updateBranding.mutate(body, {
       onSuccess: () => toast.success('Business info saved'),
-      onError: (err) => toast.error((err as Error).message),
+      onError: (err) => toast.error(getFriendlyErrorMessage(err)),
     });
   };
 
@@ -148,7 +147,7 @@ export default function BrandingPage() {
         toast.success('Logo uploaded');
         e.target.value = '';
       },
-      onError: (err) => toast.error((err as Error).message),
+      onError: (err) => toast.error(getFriendlyErrorMessage(err)),
     });
   };
 
@@ -160,7 +159,7 @@ export default function BrandingPage() {
         toast.success('UPI QR uploaded');
         e.target.value = '';
       },
-      onError: (err) => toast.error((err as Error).message),
+      onError: (err) => toast.error(getFriendlyErrorMessage(err)),
     });
   };
 
@@ -176,7 +175,7 @@ export default function BrandingPage() {
       onSuccess: () => {
         toast.success('Welcome page background uploaded (shown at 50% opacity on mobile)');
       },
-      onError: (err) => toast.error((err as Error).message),
+      onError: (err) => toast.error(getFriendlyErrorMessage(err)),
     });
   };
 
@@ -196,7 +195,7 @@ export default function BrandingPage() {
     e.target.value = '';
     uploadAppIcon.mutate(file, {
       onSuccess: () => toast.success('App icon uploaded'),
-      onError: (err) => toast.error((err as Error).message),
+      onError: (err) => toast.error(getFriendlyErrorMessage(err)),
     });
   };
 

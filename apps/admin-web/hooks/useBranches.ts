@@ -58,9 +58,7 @@ export function useUploadBranchLogo(branchId: string) {
     mutationFn: (file: File) => {
       const form = new FormData();
       form.append('file', file);
-      return api.post<Branch>(`/admin/branches/${branchId}/logo`, form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }).then((r) => r.data);
+      return api.post<Branch>(`/admin/branches/${branchId}/logo`, form).then((r) => r.data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: BRANCHES_KEY });
@@ -75,9 +73,7 @@ export function useUploadBranchUpiQr(branchId: string) {
     mutationFn: (file: File) => {
       const form = new FormData();
       form.append('file', file);
-      return api.post<Branch>(`/admin/branches/${branchId}/upi-qr`, form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }).then((r) => r.data);
+      return api.post<Branch>(`/admin/branches/${branchId}/upi-qr`, form).then((r) => r.data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: BRANCHES_KEY });

@@ -59,6 +59,10 @@ Ensures the **`assets`** bucket exists and is **public** (required for public UR
 - `apps/api/src/api/assets/assets.service.ts` — serves assets (local first, then adapter)
 - `apps/api/src/api/admin/utils/asset-upload-filenames.ts` — stable filenames matching previous disk behavior
 
+## Admin web: multipart uploads
+
+The admin SPA uses Axios with a default `Content-Type: application/json`. For `FormData` uploads, `apps/admin-web/lib/api.ts` clears `Content-Type` on the request so the browser sets `multipart/form-data` **with** the required boundary. Do **not** set `Content-Type: multipart/form-data` manually on upload requests (that omits the boundary and can cause HTTP 400 / empty file on the API).
+
 ## Related docs
 
 - [SUPABASE-STORAGE-INDEX.md](./SUPABASE-STORAGE-INDEX.md) — overview of Storage documentation  

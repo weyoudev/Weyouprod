@@ -37,6 +37,7 @@ import { AdminUsersService } from './services/admin-users.service';
 import { AdminHolidaysService } from './services/admin-holidays.service';
 import { AdminOperatingHoursService } from './services/admin-operating-hours.service';
 import { DbInfoService } from './services/db-info.service';
+import { AdminAssetUploadService } from './services/admin-asset-upload.service';
 
 @Module({
   controllers: [
@@ -62,6 +63,7 @@ import { DbInfoService } from './services/db-info.service';
     AdminSystemController,
   ],
   providers: [
+    AdminAssetUploadService,
     DbInfoService,
     AdminOrdersService,
     WalkInService,

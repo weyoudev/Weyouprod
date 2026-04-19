@@ -25,6 +25,7 @@ import {
   SEGMENT_CATEGORY_REPO,
   ITEM_SEGMENT_SERVICE_PRICE_REPO,
 } from '../../../infra/infra.module';
+import { AdminAssetUploadService } from './admin-asset-upload.service';
 
 @Injectable()
 export class AdminCatalogService {
@@ -35,6 +36,7 @@ export class AdminCatalogService {
     @Inject(SERVICE_CATEGORY_REPO) private readonly serviceCategoryRepo: ServiceCategoryRepo,
     @Inject(SEGMENT_CATEGORY_REPO) private readonly segmentCategoryRepo: SegmentCategoryRepo,
     @Inject(ITEM_SEGMENT_SERVICE_PRICE_REPO) private readonly itemSegmentServicePriceRepo: ItemSegmentServicePriceRepo,
+    private readonly adminAssetUpload: AdminAssetUploadService,
   ) {}
 
   async listItems(withPrices = false) {
@@ -178,8 +180,13 @@ export class AdminCatalogService {
   }
 
   /** Upload a custom icon image (PNG/JPG). Returns the URL to store on the item (icon field). */
-  async uploadCatalogIcon(fileName: string, _iconKey?: string): Promise<{ url: string }> {
-    const url = `/api/assets/catalog-icons/${fileName}`;
+  async uploadCatalogIcon(
+    buffer: Buffer,
+    fileName: string,
+  ): Promise<{ url: string }> {
+    const pathKey = `catalog-icons/${fileName}`;
+    const fallback = `/api/assets/${pathKey}`;
+    const url = await this.adminAssetUpload.persistUpload(pathKey, buffer, fallback);
     return { url };
   }
 

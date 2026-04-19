@@ -12,9 +12,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import * as fs from 'fs';
-import * as path from 'path';
+import { memoryStorage } from 'multer';
 import { Role } from '@shared/enums';
 import { AGENT_ROLE } from '../../common/agent-role';
 import { JwtAuthGuard } from '../../common/jwt-auth.guard';
@@ -23,65 +21,10 @@ import { RolesGuard } from '../../common/roles.guard';
 import { AdminBranchesService } from '../services/admin-branches.service';
 import { CreateBranchDto } from '../dto/create-branch.dto';
 import { UpdateBranchDto } from '../dto/update-branch.dto';
+import { branchAssetFileName } from '../utils/asset-upload-filenames';
+import type { Express } from 'express';
 
-interface MulterUploadFile {
-  filename?: string;
-  originalname?: string;
-}
-
-function sanitizeOriginalName(name: string): string {
-  return (name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100) || 'file';
-}
-
-function extFromName(name: string): string {
-  const clean = sanitizeOriginalName(name);
-  const ext = path.extname(clean).toLowerCase();
-  if (ext === '.png' || ext === '.jpg' || ext === '.jpeg' || ext === '.webp') return ext;
-  return '.png';
-}
-
-function resolveApiAssetsRoot(): string {
-  const configuredRoot = process.env.LOCAL_STORAGE_ROOT?.trim();
-  if (configuredRoot) {
-    const root = path.resolve(configuredRoot);
-    if (!fs.existsSync(root)) fs.mkdirSync(root, { recursive: true });
-    return root;
-  }
-  const cwd = process.cwd();
-  const monorepoApiRoot = path.resolve(cwd, 'apps', 'api');
-  const apiRoot = fs.existsSync(path.join(monorepoApiRoot, 'src'))
-    ? monorepoApiRoot
-    : cwd;
-  const assetsRoot = path.join(apiRoot, 'assets');
-  if (!fs.existsSync(assetsRoot)) fs.mkdirSync(assetsRoot, { recursive: true });
-  return assetsRoot;
-}
-
-function branchBrandingMulterOptions(kind: 'logo' | 'upi-qr') {
-  const destination = path.join(resolveApiAssetsRoot(), 'branding', 'branches');
-  if (!fs.existsSync(destination)) fs.mkdirSync(destination, { recursive: true });
-  return {
-    storage: diskStorage({
-      destination: (_req, _file, cb) => cb(null, destination),
-      filename: (req, file, cb) => {
-        const branchId = String(req.params?.id ?? 'branch');
-        const base = `branch-${branchId}-${kind}`;
-        const ext = extFromName(file.originalname);
-        const finalName = `${base}${ext}`;
-        try {
-          for (const existing of fs.readdirSync(destination)) {
-            if (existing.startsWith(base) && existing !== finalName) {
-              fs.unlinkSync(path.join(destination, existing));
-            }
-          }
-        } catch {
-          // best-effort cleanup only
-        }
-        cb(null, finalName);
-      },
-    }),
-  };
-}
+const IMAGE_UPLOAD_LIMIT = 10 * 1024 * 1024;
 
 @Controller('admin/branches')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -146,27 +89,39 @@ export class AdminBranchesController {
 
   @Post(':id/logo')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file', branchBrandingMulterOptions('logo')))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: IMAGE_UPLOAD_LIMIT },
+    }),
+  )
   async uploadLogo(
     @Param('id') id: string,
-    @UploadedFile() file: MulterUploadFile,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    if (!file?.filename) {
+    if (!file?.buffer?.length) {
       throw new BadRequestException('File is required');
     }
-    return this.adminBranchesService.uploadLogo(id, file.filename);
+    const fileName = branchAssetFileName(id, 'logo', file.originalname);
+    return this.adminBranchesService.uploadLogo(id, fileName, file.buffer);
   }
 
   @Post(':id/upi-qr')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file', branchBrandingMulterOptions('upi-qr')))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: IMAGE_UPLOAD_LIMIT },
+    }),
+  )
   async uploadUpiQr(
     @Param('id') id: string,
-    @UploadedFile() file: MulterUploadFile,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    if (!file?.filename) {
+    if (!file?.buffer?.length) {
       throw new BadRequestException('File is required');
     }
-    return this.adminBranchesService.uploadUpiQr(id, file.filename);
+    const fileName = branchAssetFileName(id, 'upi-qr', file.originalname);
+    return this.adminBranchesService.uploadUpiQr(id, fileName, file.buffer);
   }
 }

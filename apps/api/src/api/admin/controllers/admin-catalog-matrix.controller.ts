@@ -1,8 +1,6 @@
 import { Controller, Get, Put, Post, Patch, Delete, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Req } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import * as fs from 'fs';
-import * as path from 'path';
+import { memoryStorage } from 'multer';
 import { Role } from '@shared/enums';
 import { AGENT_ROLE } from '../../common/agent-role';
 import type { Request } from 'express';
@@ -16,69 +14,10 @@ import { CreateSegmentCategoryDto } from '../dto/create-segment-category.dto';
 import { PatchServiceCategoryDto } from '../dto/patch-service-category.dto';
 import { PatchSegmentCategoryDto } from '../dto/patch-segment-category.dto';
 import { ImportCatalogDto } from '../dto/import-catalog.dto';
+import { catalogIconFileName, sanitizeIconKey } from '../utils/asset-upload-filenames';
+import type { Express } from 'express';
 
-interface MulterUploadFile {
-  filename?: string;
-  originalname?: string;
-}
-
-function sanitizeOriginalName(name: string): string {
-  return (name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'icon';
-}
-
-function sanitizeIconKey(name: string): string {
-  return (name || 'default').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || 'default';
-}
-
-function extFromName(name: string): string {
-  const clean = sanitizeOriginalName(name);
-  const ext = path.extname(clean).toLowerCase();
-  if (ext === '.png' || ext === '.jpg' || ext === '.jpeg' || ext === '.webp') return ext;
-  return '.png';
-}
-
-function resolveApiAssetsRoot(): string {
-  const configuredRoot = process.env.LOCAL_STORAGE_ROOT?.trim();
-  if (configuredRoot) {
-    const root = path.resolve(configuredRoot);
-    if (!fs.existsSync(root)) fs.mkdirSync(root, { recursive: true });
-    return root;
-  }
-  const cwd = process.cwd();
-  const monorepoApiRoot = path.resolve(cwd, 'apps', 'api');
-  const apiRoot = fs.existsSync(path.join(monorepoApiRoot, 'src'))
-    ? monorepoApiRoot
-    : cwd;
-  const assetsRoot = path.join(apiRoot, 'assets');
-  if (!fs.existsSync(assetsRoot)) fs.mkdirSync(assetsRoot, { recursive: true });
-  return assetsRoot;
-}
-
-function catalogIconMulterOptions() {
-  const destination = path.join(resolveApiAssetsRoot(), 'catalog-icons');
-  if (!fs.existsSync(destination)) fs.mkdirSync(destination, { recursive: true });
-  return {
-    storage: diskStorage({
-      destination: (_req, _file, cb) => cb(null, destination),
-      filename: (req, file, cb) => {
-        const key = sanitizeIconKey(String(req.query?.key ?? req.query?.itemId ?? 'default'));
-        const base = `icon-${key}`;
-        const ext = extFromName(file.originalname);
-        const finalName = `${base}${ext}`;
-        try {
-          for (const existing of fs.readdirSync(destination)) {
-            if (existing.startsWith(base) && existing !== finalName) {
-              fs.unlinkSync(path.join(destination, existing));
-            }
-          }
-        } catch {
-          // best-effort cleanup only
-        }
-        cb(null, finalName);
-      },
-    }),
-  };
-}
+const IMAGE_UPLOAD_LIMIT = 10 * 1024 * 1024;
 
 @Controller('admin/catalog')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -262,13 +201,19 @@ export class AdminCatalogMatrixController {
 
   @Post('icon/upload')
   @Roles(Role.ADMIN, Role.OPS)
-  @UseInterceptors(FileInterceptor('file', catalogIconMulterOptions()))
-  async uploadCatalogIcon(@UploadedFile() file: MulterUploadFile, @Req() req: Request) {
-    if (!file?.filename) {
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: IMAGE_UPLOAD_LIMIT },
+    }),
+  )
+  async uploadCatalogIcon(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
+    if (!file?.buffer?.length) {
       throw new BadRequestException('File is required');
     }
     const iconKey = sanitizeIconKey(String((req.query?.key as string | undefined) ?? (req.query?.itemId as string | undefined) ?? 'default'));
-    return this.adminCatalogService.uploadCatalogIcon(file.filename, iconKey);
+    const fileName = catalogIconFileName(iconKey, file.originalname);
+    return this.adminCatalogService.uploadCatalogIcon(file.buffer, fileName);
   }
 
   @Post('import')

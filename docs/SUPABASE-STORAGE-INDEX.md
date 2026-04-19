@@ -128,6 +128,7 @@ Welcome! This index helps you navigate the Supabase Storage setup documentation.
 
 ### Existing Documentation
 
+- **Admin images (branding, carousel, icons):** [`ASSET-IMAGE-STORAGE.md`](./ASSET-IMAGE-STORAGE.md) — how uploads use the `assets` bucket and post-deploy checklist
 - **Supabase database setup:** [`supabase.md`](./supabase.md)
 - **Local development:** [`run-local.md`](./run-local.md)
 - **API routes:** [`routes.md`](./routes.md)
@@ -247,8 +248,8 @@ You know setup is successful when:
    - Previews display correctly
 
 2. **Database correct:**
-   - URLs are full Supabase URLs
-   - No `/api/assets/...` paths from new uploads
+   - With `SUPABASE_URL` + service key: new image uploads should store full **Supabase public URLs** (see [`ASSET-IMAGE-STORAGE.md`](./ASSET-IMAGE-STORAGE.md))
+   - Local-only API: new uploads may still be `/api/assets/...` with files under `LOCAL_STORAGE_ROOT`
 
 3. **Performance good:**
    - Images load in < 1 second

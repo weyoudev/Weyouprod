@@ -10,9 +10,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import * as fs from 'fs';
-import * as path from 'path';
+import { memoryStorage } from 'multer';
 import { Role } from '@shared/enums';
 import { AGENT_ROLE } from '../../common/agent-role';
 import { JwtAuthGuard } from '../../common/jwt-auth.guard';
@@ -22,64 +20,16 @@ import { RolesGuard } from '../../common/roles.guard';
 import type { AuthUser } from '../../common/roles.guard';
 import { AdminBrandingService } from '../services/admin-branding.service';
 import { UpdateBrandingDto } from '../dto/update-branding.dto';
+import { brandingStableFileName } from '../utils/asset-upload-filenames';
+import type { Express } from 'express';
 
-/** File from multer memory storage (used by FileInterceptor). */
-interface MulterUploadFile {
-  filename?: string;
-  originalname?: string;
-}
+const IMAGE_UPLOAD_LIMIT = 10 * 1024 * 1024;
 
-function sanitizeOriginalName(name: string): string {
-  return (name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100) || 'file';
-}
-
-function extFromName(name: string): string {
-  const clean = sanitizeOriginalName(name);
-  const ext = path.extname(clean).toLowerCase();
-  if (ext === '.png' || ext === '.jpg' || ext === '.jpeg' || ext === '.webp') return ext;
-  return '.png';
-}
-
-function resolveApiAssetsRoot(): string {
-  const configuredRoot = process.env.LOCAL_STORAGE_ROOT?.trim();
-  if (configuredRoot) {
-    const root = path.resolve(configuredRoot);
-    if (!fs.existsSync(root)) fs.mkdirSync(root, { recursive: true });
-    return root;
-  }
-  const cwd = process.cwd();
-  const monorepoApiRoot = path.resolve(cwd, 'apps', 'api');
-  const apiRoot = fs.existsSync(path.join(monorepoApiRoot, 'src'))
-    ? monorepoApiRoot
-    : cwd;
-  const assetsRoot = path.join(apiRoot, 'assets');
-  if (!fs.existsSync(assetsRoot)) fs.mkdirSync(assetsRoot, { recursive: true });
-  return assetsRoot;
-}
-
-function brandingMulterOptions(prefix: string) {
-  const destination = path.join(resolveApiAssetsRoot(), 'branding');
-  if (!fs.existsSync(destination)) fs.mkdirSync(destination, { recursive: true });
-  const stableBase = prefix || 'logo-';
-  return {
-    storage: diskStorage({
-      destination: (_req, _file, cb) => cb(null, destination),
-      filename: (_req, file, cb) => {
-        const ext = extFromName(file.originalname);
-        const finalName = `${stableBase}${ext}`;
-        try {
-          for (const existing of fs.readdirSync(destination)) {
-            if (existing.startsWith(stableBase) && existing !== finalName) {
-              fs.unlinkSync(path.join(destination, existing));
-            }
-          }
-        } catch {
-          // best-effort cleanup only
-        }
-        cb(null, finalName);
-      },
-    }),
-  };
+function brandingMemoryInterceptor() {
+  return FileInterceptor('file', {
+    storage: memoryStorage(),
+    limits: { fileSize: IMAGE_UPLOAD_LIMIT },
+  });
 }
 
 @Controller('admin/branding')
@@ -118,41 +68,45 @@ export class AdminBrandingController {
 
   @Post('logo')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file', brandingMulterOptions('logo')))
-  async uploadLogo(@UploadedFile() file: MulterUploadFile) {
-    if (!file?.filename) {
+  @UseInterceptors(brandingMemoryInterceptor())
+  async uploadLogo(@UploadedFile() file: Express.Multer.File) {
+    if (!file?.buffer?.length) {
       throw new BadRequestException('File is required');
     }
-    return this.adminBrandingService.uploadLogo(file.filename);
+    const fileName = brandingStableFileName('logo', file.originalname);
+    return this.adminBrandingService.uploadLogo(fileName, file.buffer);
   }
 
   @Post('upi-qr')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file', brandingMulterOptions('upi-qr')))
-  async uploadUpiQr(@UploadedFile() file: MulterUploadFile) {
-    if (!file?.filename) {
+  @UseInterceptors(brandingMemoryInterceptor())
+  async uploadUpiQr(@UploadedFile() file: Express.Multer.File) {
+    if (!file?.buffer?.length) {
       throw new BadRequestException('File is required');
     }
-    return this.adminBrandingService.uploadUpiQr(file.filename);
+    const fileName = brandingStableFileName('upi-qr', file.originalname);
+    return this.adminBrandingService.uploadUpiQr(fileName, file.buffer);
   }
 
   @Post('welcome-background')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file', brandingMulterOptions('welcome-bg')))
-  async uploadWelcomeBackground(@UploadedFile() file: MulterUploadFile) {
-    if (!file?.filename) {
+  @UseInterceptors(brandingMemoryInterceptor())
+  async uploadWelcomeBackground(@UploadedFile() file: Express.Multer.File) {
+    if (!file?.buffer?.length) {
       throw new BadRequestException('File is required');
     }
-    return this.adminBrandingService.uploadWelcomeBackground(file.filename);
+    const fileName = brandingStableFileName('welcome-bg', file.originalname);
+    return this.adminBrandingService.uploadWelcomeBackground(fileName, file.buffer);
   }
 
   @Post('app-icon')
   @Roles(Role.ADMIN, Role.BILLING)
-  @UseInterceptors(FileInterceptor('file', brandingMulterOptions('app-icon')))
-  async uploadAppIcon(@UploadedFile() file: MulterUploadFile) {
-    if (!file?.filename) {
+  @UseInterceptors(brandingMemoryInterceptor())
+  async uploadAppIcon(@UploadedFile() file: Express.Multer.File) {
+    if (!file?.buffer?.length) {
       throw new BadRequestException('File is required');
     }
-    return this.adminBrandingService.uploadAppIcon(file.filename);
+    const fileName = brandingStableFileName('app-icon', file.originalname);
+    return this.adminBrandingService.uploadAppIcon(fileName, file.buffer);
   }
 }

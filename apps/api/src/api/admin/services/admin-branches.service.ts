@@ -1,11 +1,13 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { BranchRepo } from '../../../application/ports';
 import { BRANCH_REPO } from '../../../infra/infra.module';
+import { AdminAssetUploadService } from './admin-asset-upload.service';
 
 @Injectable()
 export class AdminBranchesService {
   constructor(
     @Inject(BRANCH_REPO) private readonly branchRepo: BranchRepo,
+    private readonly adminAssetUpload: AdminAssetUploadService,
   ) {}
 
   async list() {
@@ -40,16 +42,20 @@ export class AdminBranchesService {
     return this.branchRepo.delete(id);
   }
 
-  async uploadLogo(branchId: string, fileName: string) {
+  async uploadLogo(branchId: string, fileName: string, buffer: Buffer) {
     await this.getById(branchId);
-    const url = `/api/assets/branding/branches/${fileName}`;
+    const pathKey = `branding/branches/${fileName}`;
+    const fallback = `/api/assets/${pathKey}`;
+    const url = await this.adminAssetUpload.persistUpload(pathKey, buffer, fallback);
     await this.branchRepo.setLogoUrl(branchId, url);
     return this.getById(branchId);
   }
 
-  async uploadUpiQr(branchId: string, fileName: string) {
+  async uploadUpiQr(branchId: string, fileName: string, buffer: Buffer) {
     await this.getById(branchId);
-    const url = `/api/assets/branding/branches/${fileName}`;
+    const pathKey = `branding/branches/${fileName}`;
+    const fallback = `/api/assets/${pathKey}`;
+    const url = await this.adminAssetUpload.persistUpload(pathKey, buffer, fallback);
     await this.branchRepo.setUpiQrUrl(branchId, url);
     return this.getById(branchId);
   }

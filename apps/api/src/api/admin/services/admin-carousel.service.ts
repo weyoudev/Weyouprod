@@ -1,6 +1,7 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import type { CarouselRepo } from '../../../application/ports';
 import { CAROUSEL_REPO } from '../../../infra/infra.module';
+import { AdminAssetUploadService } from './admin-asset-upload.service';
 
 const MAX_IMAGES = 3;
 const POSITIONS = [1, 2, 3] as const;
@@ -9,6 +10,7 @@ const POSITIONS = [1, 2, 3] as const;
 export class AdminCarouselService {
   constructor(
     @Inject(CAROUSEL_REPO) private readonly carouselRepo: CarouselRepo,
+    private readonly adminAssetUpload: AdminAssetUploadService,
   ) {}
 
   async list() {
@@ -31,11 +33,13 @@ export class AdminCarouselService {
     return { slots: [byPosition[1], byPosition[2], byPosition[3]] };
   }
 
-  async upload(fileName: string, position: number) {
+  async upload(fileName: string, position: number, buffer: Buffer) {
     if (!POSITIONS.includes(position as 1 | 2 | 3)) {
       throw new BadRequestException('Position must be 1, 2, or 3');
     }
-    const imageUrl = `/api/assets/carousel/${fileName}`;
+    const pathKey = `carousel/${fileName}`;
+    const fallback = `/api/assets/${pathKey}`;
+    const imageUrl = await this.adminAssetUpload.persistUpload(pathKey, buffer, fallback);
     const record = await this.carouselRepo.setImage(position, imageUrl);
     return {
       position: record.position,
